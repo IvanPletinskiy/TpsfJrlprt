@@ -13,6 +13,8 @@ extern "C"
 void JNICALL Java_com_handen_roadhelper_MainActivity_salt(JNIEnv *env, jobject instance,
                                                                            jlong matAddrGray,
                                                                            jint nbrElem) {
+
+
     Mat &mGr = *(Mat *) matAddrGray;
     for (int k = 0; k < nbrElem; k++) {
         int i = rand() % mGr.cols;
