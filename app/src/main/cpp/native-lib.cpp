@@ -16,10 +16,15 @@ void convert_to_gray(Mat mat);
 void JNICALL Java_com_handen_roadhelper_MainActivity_nativeOnFrame(JNIEnv *env, jobject instance,
                                                                    jlong matAddr,
                                                                    jint nbrElem) {
+    //bitwise_add позволяет выделить кусок матрицы res = cv2.bitwise_and(frame,frame, mask= mask)
     cv::Mat mat = *(Mat *) matAddr;
   //  convert_to_gray(mat); //не работает
 
     blur(mat, mat, Size(10, 10));
+   // Mat secordMat = *(Mat *) matAddr;
+   // cvtColor(secordMat, secordMat, COLOR_RGBA2RGB);
+   // cvtColor(secordMat, secordMat, COLOR_RGB2HSV);
+   // inRange(secordMat, Scalar(110,50,50), Scalar(130, 255, 255), mat); //не работает
 
     find_shapes(mat);
 }
@@ -29,7 +34,8 @@ void convert_to_gray(Mat mat) {
 }
 
 void find_shapes(Mat mat) {
-    IplImage *img;
+    int64 e1 = cv::getTickCount();
+    IplImage *img = NULL;
     img = cvCreateImage(cvSize(mat.cols, mat.rows), 8, 3);
     IplImage ipltemp = mat;
     // cvCopy(&ipltemp, img);
@@ -41,8 +47,8 @@ void find_shapes(Mat mat) {
     //thresholding the grayscale image to get better results
     cvThreshold(imgGrayScale, imgGrayScale, 128, 255, CV_THRESH_BINARY);
 
-    CvSeq *contours;  //hold the pointer to a contour in the memory block
-    CvSeq *result;   //hold sequence of points of a contour
+    CvSeq *contours = NULL;  //hold the pointer to a contour in the memory block
+    CvSeq *result = NULL;   //hold sequence of points of a contour
     CvMemStorage *storage = cvCreateMemStorage(0); //storage area for all contours
 
     //finding all contours in the image
@@ -106,11 +112,31 @@ void find_shapes(Mat mat) {
         //obtain the next contour
         contours = contours->h_next;
     }
+    CvFont font;
+    cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 1, 1);
 
-    //   cvReleaseMemStorage(&storage);
-    // releaseImage(&img);
-    //   cvReleaseImage(&imgGrayScale);
-//    delete img;
+    char cbuff[20];
+    int64 e2 = cv::getTickCount();
+    float time = (e2 - e1)/ cv::getTickFrequency ();
+    sprintf (cbuff, "%f sec", time);
+    cvPutText (img, cbuff, CvPoint (30, 30), &font, cvScalar (255, 255, 255));
+
+//    img = nullptr;
+   // delete ipltemp;
+//    imgGrayScale = nullptr;
+//    contours = nullptr;
+//    result = nullptr;
+//    cvReleaseMemStorage(&storage);
+//    storage = nullptr;
+
+    ///cleaning up
+//    cvDestroyAllWindows();
+    if (storage)
+      cvReleaseMemStorage(&storage);
+//    if (img)
+//      cvReleaseImage(&img);
+    if (imgGrayScale)
+      cvReleaseImage(&imgGrayScale);
 }
 
 

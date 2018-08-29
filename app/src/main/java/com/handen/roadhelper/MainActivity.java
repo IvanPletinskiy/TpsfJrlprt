@@ -117,7 +117,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
    //     Mat matGray = inputFrame.gray();
         Mat matRgba = inputFrame.rgba();
         nativeOnFrame(matRgba.getNativeObjAddr(), 2000);
-
+     //   Mat copyMat = new Mat();
+     //   matRgba.copyTo(copyMat);
+     //   matRgba = null;
         return matRgba;
     }
 
