@@ -14,7 +14,11 @@ import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
 import org.opencv.core.Mat;
+import org.opencv.imgcodecs.Imgcodecs;
+
+import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
@@ -51,10 +55,25 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         ActivityCompat.requestPermissions(MainActivity.this,
                 new String[]{Manifest.permission.CAMERA},
                 1);
+        initializeImages();
 
         _cameraBridgeViewBase = (CameraBridgeViewBase) findViewById(R.id.main_surface);
         _cameraBridgeViewBase.setVisibility(SurfaceView.VISIBLE);
         _cameraBridgeViewBase.setCvCameraViewListener(this);
+    }
+
+    private void initializeImages() {
+        Mat pedastrian = null;
+        try {
+            pedastrian = Utils.loadResource(getApplicationContext(),
+                    R.drawable.pedastrian,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR
+            );
+        }
+        catch(IOException e) {
+            e.printStackTrace();
+        }
+        setPedastrian(pedastrian.getNativeObjAddr());
     }
 
     @Override
@@ -125,6 +144,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     public native void nativeOnFrame(long matAddrGray, int nbrElem);
+    public native void setPedastrian(long matAddr);
 }
 
 
