@@ -34,6 +34,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     // Load ndk built module, as specified in moduleName in build.gradle
                     // after opencv initialization
                     System.loadLibrary("native-lib");
+                    initializeImages();
                     _cameraBridgeViewBase.enableView();
                 }
                 break;
@@ -55,7 +56,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         ActivityCompat.requestPermissions(MainActivity.this,
                 new String[]{Manifest.permission.CAMERA},
                 1);
-        initializeImages();
 
         _cameraBridgeViewBase = (CameraBridgeViewBase) findViewById(R.id.main_surface);
         _cameraBridgeViewBase.setVisibility(SurfaceView.VISIBLE);
