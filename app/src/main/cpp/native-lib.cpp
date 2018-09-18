@@ -25,6 +25,7 @@ Rect createRect();
 Mat pedastrian;
 
 BFMatcher matcher(NORM_HAMMING);
+Mat retMat;
 
 void orb(IplImage *pImage);
 
@@ -35,30 +36,21 @@ Java_com_handen_roadhelper_MainActivity_nativeOnFrame(JNIEnv *env, jobject insta
     //TODO warpPerspective() позволяет выровнять матрицу на плоскости
     int64 e1 = cv::getTickCount();
 
-    Mat descriptorsCaptured;
-    std::vector<std::vector<cv::DMatch> > matches1;
-    Mat descriptorsTarget;
-    matcher.knnMatch(descriptorsCaptured , descriptorsTarget,
-                     matches1, 2);
-    matcher.knnMatch(descriptorsCaptured , descriptorsTarget, matches1, 2);
-
-    cv::Mat mat = *(Mat *) matAddr;
+    retMat = *(Mat *) matAddr;
     //  convert_to_gray(mat); //не работает
 
-    blur(mat, mat, Size(10, 10));
+    blur(retMat, retMat, Size(10, 10));
 
     // inRange(secordMat, Scalar(110,50,50), Scalar(130, 255, 255), mat); //не работает
 
-    find_shapes(mat);
+    find_shapes(retMat);
 
     char cbuff[20];
     int64 e2 = cv::getTickCount();
     float time = (e2 - e1) / cv::getTickFrequency();
     sprintf(cbuff, "%f sec", time);
-    putText(mat, cbuff, CvPoint(30, 30), FONT_HERSHEY_COMPLEX, 1.0, cvScalar(255, 255, 255));
+    putText(retMat, cbuff, CvPoint(30, 30), FONT_HERSHEY_COMPLEX, 1.0, cvScalar(255, 255, 255));
 }
-
-
 
 void find_shapes(Mat mat) {
     IplImage *img = NULL;
@@ -121,26 +113,29 @@ void find_shapes(Mat mat) {
                 CvPoint *p = pt[i];
                 if (p->x > max_x)
                     max_x = p->x;
-                if(p->x < min_x )
+                if (p->x < min_x)
                     min_x = p->x;
-                if(p->y > max_y)
+                if (p->y > max_y)
                     max_y = p->y;
-                if(p->y < min_y)
+                if (p->y < min_y)
                     min_y = p->y;
             }
 
-            CvPoint p1 (min_x, min_y);
-            CvPoint p2 (max_x, min_y);
-            CvPoint p3 (max_x, max_y);
-            CvPoint p4 (min_x, max_y);
+            CvPoint p1(min_x, min_y);
+            CvPoint p2(max_x, min_y);
+            CvPoint p3(max_x, max_y);
+            CvPoint p4(min_x, max_y);
             cvLine(img, p1, p2, cvScalar(0, 255, 0), 4);
             cvLine(img, p2, p3, cvScalar(0, 255, 0), 4);
             cvLine(img, p3, p4, cvScalar(0, 255, 0), 4);
             cvLine(img, p4, p1, cvScalar(0, 255, 0), 4);
 
             cvSetImageROI(img, cvRect(min_x, min_y, max_x - min_x, max_y - min_y));
+            cv::Mat mat123 = cv::cvarrToMat(img);
+            Rect rect = Rect(min_x, min_y, max_x - min_x, max_y - min_y);
+            Mat mat1 = Mat(mat123, rect);
             orb(img);
-     //       cvAddS(img, cvScalar(0, 255, 0), img);
+            //       cvAddS(img, cvScalar(0, 255, 0), img);
 
             /*
             //drawing lines around the quadrilateral
@@ -149,7 +144,7 @@ void find_shapes(Mat mat) {
             cvLine(img, *pt[2], *pt[3], cvScalar(0, 255, 0), 4);
             cvLine(img, *pt[3], *pt[0], cvScalar(0, 255, 0), 4);
             */
-            detect_square_sign();
+            //      detect_square_sign();
         }
             //if there are 7  vertices  in the contour(It should be a heptagon)
         else if (result->total == 7) {
@@ -183,17 +178,43 @@ void find_shapes(Mat mat) {
 extern "C" void JNICALL
 Java_com_handen_roadhelper_MainActivity_setPedastrian(JNIEnv *env, jobject instance,
                                                       jlong matAddr
-                                                      ) {
-    pedastrian = *(Mat * ) matAddr;
+) {
+    pedastrian = *(Mat *) matAddr;
 }
 
 void orb(IplImage *pImage) {
+    //  Mat(const IplImage* pImage, bool copyData=false);
+    cv::Mat mat = cv::cvarrToMat(pImage);
+
+    std::vector<cv::KeyPoint> targetKeypoints;
+    std::vector<cv::KeyPoint> referenceKeypoints;
+
+    cv::Mat targetDescriptors;
+    cv::Mat referenceDescriptors;
 
 
-}
+    //  DescriptorMatcher matcher = DescriptorMatcher();
+    BFMatcher matcher(NORM_HAMMING);
+    Ptr<ORB> orb = ORB::create();
 
-void detect_square_sign() {
+    orb->detectAndCompute(mat, noArray(), targetKeypoints, targetDescriptors);
+    orb->detectAndCompute(pedastrian, noArray(), referenceKeypoints, referenceDescriptors);
 
+    //Match images based on k nearest neighbour
+    //std::vector<std::vector<cv::DMatch> > matches;
+    std::vector<DMatch> matches;
+    matcher.match(targetDescriptors, referenceDescriptors,
+                  matches, noArray());
+
+    if (matches.size() < 4) {
+        //There are too few matches to find the homogrhaphy
+        return;
+    }
+    vector<KeyPoint> targetKeypointsList = targetKeypoints;
+    vector<KeyPoint> referenceKeypointsList = referenceKeypoints;
+    for (int i = 0; i < matches.size(); i++) {
+
+    }
 }
 
 
