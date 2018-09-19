@@ -125,15 +125,20 @@ void find_shapes(Mat mat) {
             CvPoint p2(max_x, min_y);
             CvPoint p3(max_x, max_y);
             CvPoint p4(min_x, max_y);
+
+            /*
+
             cvLine(img, p1, p2, cvScalar(0, 255, 0), 4);
             cvLine(img, p2, p3, cvScalar(0, 255, 0), 4);
             cvLine(img, p3, p4, cvScalar(0, 255, 0), 4);
             cvLine(img, p4, p1, cvScalar(0, 255, 0), 4);
 
+            */
+
             cvSetImageROI(img, cvRect(min_x, min_y, max_x - min_x, max_y - min_y));
             cv::Mat mat123 = cv::cvarrToMat(img);
             Rect rect = Rect(min_x, min_y, max_x - min_x, max_y - min_y);
-            Mat mat1 = Mat(mat123, rect);
+         //   Mat mat1 = Mat(mat123, rect);
             orb(img);
             //       cvAddS(img, cvScalar(0, 255, 0), img);
 
@@ -186,6 +191,20 @@ void orb(IplImage *pImage) {
     //  Mat(const IplImage* pImage, bool copyData=false);
     cv::Mat mat = cv::cvarrToMat(pImage);
 
+    line(retMat,Point(0, 0), Point (100, 100), Scalar(0, 255, 0), 4);
+
+  //  cv::Mat referenceCorners(4, 1, CV_32FC2);
+  //  referenceCorners.at()
+    std::vector<Point2f> referenceCorners;
+    referenceCorners.push_back(Point(0, 0));
+    referenceCorners.push_back(Point(pedastrian.cols, 0));
+    referenceCorners.push_back(Point(pedastrian.cols, pedastrian.rows));
+    referenceCorners.push_back(Point(0, pedastrian.rows));
+
+
+   // cv::Mat_<cv::Point> targetCorners(4, 1, cv::Point(0, 0));
+    std::vector<Point2f> targetCorners(4);
+
     std::vector<cv::KeyPoint> targetKeypoints;
     std::vector<cv::KeyPoint> referenceKeypoints;
 
@@ -210,10 +229,66 @@ void orb(IplImage *pImage) {
         //There are too few matches to find the homogrhaphy
         return;
     }
-    vector<KeyPoint> targetKeypointsList = targetKeypoints;
-    vector<KeyPoint> referenceKeypointsList = referenceKeypoints;
-    for (int i = 0; i < matches.size(); i++) {
 
+    //Calculate the max and min distances between keypoints
+    double maxDist = 0.0;
+    double minDist = 100000;
+
+    for (DMatch match : matches) {
+        double dist = match.distance;
+        if(dist < minDist) {
+            minDist = dist;
+        }
+        if(dist > maxDist) {
+            maxDist = dist;
+        }
+    }
+
+    // The thresholds for minDist are chosen subjectively
+    // based on testing. The unit is not related to pixel
+    // distances; it is related to the number of failed tests
+    // for similarity between the matches descriptors
+    if(minDist > 50.0) {
+        // The target is completely lost.
+        // Discard any previously found corners.
+        //mSceneCorners.create(0, 0, mSceneCorners.type());
+        targetCorners = Mat(0, 0, CV_32FC2);
+        return;
+    }
+    else {
+        if(minDist > 25.0) {
+            // The target is post but maybe it is still close.
+            // Keep any previously found corners.
+            return;
+        }
+    }
+
+    std::vector<cv::Point> goodTargetPoints;
+    std::vector<cv::Point> goodReferencePoints;
+
+    double maxGoodMatchDist = 1.75 * minDist;
+    for(DMatch match : matches) {
+        if(match.distance < maxGoodMatchDist) {
+            goodReferencePoints.push_back(referenceKeypoints[match.trainIdx].pt);
+            goodTargetPoints.push_back(targetKeypoints[match.queryIdx].pt);
+        }
+    }
+
+    if(goodTargetPoints.size() < 4 ||
+            goodReferencePoints.size() < 4) {
+        // There are too few good points to find the homography.
+        return;
+    }
+
+    Mat homography, m = findHomography(goodReferencePoints, goodTargetPoints, RANSAC, 5.0);
+
+    if(!homography.empty()) {
+        perspectiveTransform(referenceCorners, targetCorners, homography);
+
+        line(retMat, targetCorners[0], targetCorners[1], Scalar(0, 255, 0), 4);
+        line(retMat, targetCorners[1], targetCorners[2], Scalar(0, 255, 0), 4);
+        line(retMat, targetCorners[2], targetCorners[3], Scalar(0, 255, 0), 4);
+        line(retMat, targetCorners[3], targetCorners[0], Scalar(0, 255, 0), 4);
     }
 }
 
