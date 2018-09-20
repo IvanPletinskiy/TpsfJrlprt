@@ -24,8 +24,9 @@ Rect createRect();
 
 Mat pedastrian;
 
-BFMatcher matcher(NORM_HAMMING);
 Mat retMat;
+
+Point2f P1,P2,P3,P4;
 
 void orb(IplImage *pImage);
 
@@ -37,11 +38,8 @@ Java_com_handen_roadhelper_MainActivity_nativeOnFrame(JNIEnv *env, jobject insta
     int64 e1 = cv::getTickCount();
 
     retMat = *(Mat *) matAddr;
-    //  convert_to_gray(mat); //не работает
 
-    blur(retMat, retMat, Size(10, 10));
-
-    // inRange(secordMat, Scalar(110,50,50), Scalar(130, 255, 255), mat); //не работает
+    blur(retMat, retMat, Size(5, 5));
 
     find_shapes(retMat);
 
@@ -125,17 +123,20 @@ void find_shapes(Mat mat) {
             CvPoint p2(max_x, min_y);
             CvPoint p3(max_x, max_y);
             CvPoint p4(min_x, max_y);
-
-            /*
+            P1 = p1;
+            P2 = p2;
+            P3 = p3;
+            P4 = p4;
+/*
 
             cvLine(img, p1, p2, cvScalar(0, 255, 0), 4);
             cvLine(img, p2, p3, cvScalar(0, 255, 0), 4);
             cvLine(img, p3, p4, cvScalar(0, 255, 0), 4);
             cvLine(img, p4, p1, cvScalar(0, 255, 0), 4);
-
-            */
+*/
 
             cvSetImageROI(img, cvRect(min_x, min_y, max_x - min_x, max_y - min_y));
+            retMat.adjustROI(min_x, min_y, max_x - min_x, max_y - min_y);
             cv::Mat mat123 = cv::cvarrToMat(img);
             Rect rect = Rect(min_x, min_y, max_x - min_x, max_y - min_y);
          //   Mat mat1 = Mat(mat123, rect);
@@ -170,6 +171,7 @@ void find_shapes(Mat mat) {
             cvLine(img, *pt[6], *pt[0], cvScalar(0, 0, 255), 4);
              */
         }
+  //      retMat.()
         //obtain the next contour
         contours = contours->h_next;
     }
@@ -190,8 +192,9 @@ Java_com_handen_roadhelper_MainActivity_setPedastrian(JNIEnv *env, jobject insta
 void orb(IplImage *pImage) {
     //  Mat(const IplImage* pImage, bool copyData=false);
     cv::Mat mat = cv::cvarrToMat(pImage);
+    resize(mat, mat, Size(pedastrian.cols, 360));
 
-    line(retMat,Point(0, 0), Point (100, 100), Scalar(0, 255, 0), 4);
+ //   line(retMat,Point(0, 0), Point (100, 100), Scalar(0, 255, 0), 4);
 
   //  cv::Mat referenceCorners(4, 1, CV_32FC2);
   //  referenceCorners.at()
@@ -200,7 +203,6 @@ void orb(IplImage *pImage) {
     referenceCorners.push_back(Point(pedastrian.cols, 0));
     referenceCorners.push_back(Point(pedastrian.cols, pedastrian.rows));
     referenceCorners.push_back(Point(0, pedastrian.rows));
-
 
    // cv::Mat_<cv::Point> targetCorners(4, 1, cv::Point(0, 0));
     std::vector<Point2f> targetCorners(4);
@@ -280,15 +282,19 @@ void orb(IplImage *pImage) {
         return;
     }
 
-    Mat homography, m = findHomography(goodReferencePoints, goodTargetPoints, RANSAC, 5.0);
+    //Mat homography;
+    Mat homography = findHomography(goodReferencePoints, goodTargetPoints, RANSAC, 5);
 
     if(!homography.empty()) {
         perspectiveTransform(referenceCorners, targetCorners, homography);
-
-        line(retMat, targetCorners[0], targetCorners[1], Scalar(0, 255, 0), 4);
-        line(retMat, targetCorners[1], targetCorners[2], Scalar(0, 255, 0), 4);
-        line(retMat, targetCorners[2], targetCorners[3], Scalar(0, 255, 0), 4);
-        line(retMat, targetCorners[3], targetCorners[0], Scalar(0, 255, 0), 4);
+    //    targetCorners[0] += P1;
+  //      targetCorners[1] += P1;
+   //     targetCorners[2] += P1;
+  //      targetCorners[3] += P1;
+        line(retMat, P1, P2 , Scalar(0, 255, 0), 4);
+        line(retMat, P2, P3, Scalar(0, 255, 0), 4);
+        line(retMat, P3, P4, Scalar(0, 255, 0), 4);
+        line(retMat, P4, P1, Scalar(0, 255, 0), 4);
     }
 }
 
