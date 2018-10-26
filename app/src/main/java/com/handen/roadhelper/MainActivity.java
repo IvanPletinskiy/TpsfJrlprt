@@ -73,7 +73,18 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         catch(IOException e) {
             e.printStackTrace();
         }
-        setPedastrian(pedastrian.getNativeObjAddr());
+        addFilter(pedastrian.getNativeObjAddr());
+        Mat znak27 = null;
+        try {
+            znak27 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.znak27,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR
+            );
+        }
+        catch(IOException e) {
+            e.printStackTrace();
+        }
+    //    addFilter(znak27.getNativeObjAddr()); //FIXME
     }
 
     @Override
@@ -144,7 +155,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     public native void nativeOnFrame(long matAddrGray, int nbrElem);
-    public native void setPedastrian(long matAddr);
+    public native void addFilter(long matAddr);
 }
 
 
