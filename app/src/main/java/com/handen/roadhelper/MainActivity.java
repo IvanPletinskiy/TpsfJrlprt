@@ -24,6 +24,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     private static final String TAG = "OCVSample::Activity";
     private CameraBridgeViewBase _cameraBridgeViewBase;
+    static boolean isFilterAdded = false;
 
     private BaseLoaderCallback _baseLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -102,6 +103,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     private void initializeImages() {
+        if(isFilterAdded)
+            return;
         Mat pedastrian = null;
         try {
             pedastrian = Utils.loadResource(getApplicationContext(),
@@ -114,18 +117,44 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
         addFilter(pedastrian.getNativeObjAddr(), 5612, 4);
 
-        Mat znak27 = null;
+        Mat sign27 = new Mat();
         try {
-            znak27 = Utils.loadResource(getApplicationContext(),
+            sign27 = Utils.loadResource(getApplicationContext(),
                     R.drawable.znak27,
-                    Imgcodecs.CV_LOAD_IMAGE_COLOR
+                    Imgcodecs.CV_LOAD_IMAGE_ANYCOLOR
             );
         }
         catch(IOException e) {
             e.printStackTrace();
         }
 
-        addFilter(znak27.getNativeObjAddr(), 27, 4);
+        addFilter(sign27.getNativeObjAddr(), 27, 4);
+
+        Mat sign530 = null;
+        try {
+            sign530 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.znak530,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR
+            );
+        }
+        catch(IOException e) {
+            e.printStackTrace();
+        }
+        addFilter(sign530.getNativeObjAddr(), 530, 4);
+
+        Mat sign121 = null;
+        try {
+            sign121 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.sign121,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR
+            );
+        }
+        catch(IOException e) {
+            e.printStackTrace();
+        }
+        addFilter(sign121.getNativeObjAddr(), 121, 3);
+
+        isFilterAdded = true;
     }
 
     public void onDestroy() {
@@ -158,7 +187,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     public native void nativeOnFrame(long matAddrGray, int nbrElem);
     public native void addFilter(long matAddr, int code, int corners);
-  //  public native void addFilter(long matAddr, int code, int corners);
 }
 
 

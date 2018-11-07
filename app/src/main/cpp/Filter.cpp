@@ -15,11 +15,11 @@ using namespace cv;
 
 struct Filter {
   //  string name;
+    int code;
     int corners;
     vector<cv::KeyPoint> keypoints;
     Mat descriptors;
 
-    Filter(int corners, const vector<KeyPoint> &keypoints,
-           const Mat &descriptors) : corners(corners), keypoints(keypoints),
-                                     descriptors(descriptors) {}
+    Filter(int code, int corners, const vector<KeyPoint> &keypoints, const Mat &descriptors) : code(
+            code), corners(corners), keypoints(keypoints), descriptors(descriptors) {}
 };

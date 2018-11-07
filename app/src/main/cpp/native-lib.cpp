@@ -8,6 +8,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include "Filter.cpp"
+#include "Triangle.cpp"
 //#include "Java_com_handen_roadhelper_MainActivity_nativeOnFrame.h"
 using namespace std;
 
@@ -31,11 +32,14 @@ Mat pedastrian;
 
 Mat retMat;
 std::vector<Rect> detected_rects;
+vector<Triangle> detected_triangles;
 Point P1, P2, P3, P4;
 
 vector<Filter> filters;
 
 void orb(Mat mat, int corners);
+
+void draw_detected_shapes();
 
 extern "C" void JNICALL
 Java_com_handen_roadhelper_MainActivity_nativeOnFrame(JNIEnv *env, jobject instance,
@@ -45,7 +49,6 @@ Java_com_handen_roadhelper_MainActivity_nativeOnFrame(JNIEnv *env, jobject insta
     int64 e1 = cv::getTickCount();
 
     retMat = *(Mat *) matAddr;
-
     blur(retMat, retMat, Size(5, 5));
 
     find_shapes(retMat);
@@ -57,17 +60,31 @@ Java_com_handen_roadhelper_MainActivity_nativeOnFrame(JNIEnv *env, jobject insta
     sprintf(cbuff, "%f sec", time);
     putText(retMat, cbuff, CvPoint(30, 30), FONT_HERSHEY_COMPLEX, 1.0, cvScalar(255, 255, 255));
 
-    Rect minRect;
-    int minArea = -1;
-    for (Rect r : detected_rects) {
-        if (r.area() < minArea || minArea == -1) {
-            minArea = r.area();
-            minRect = r;
+    draw_detected_shapes();
+}
+
+void draw_detected_shapes() {
+    if(detected_rects.size() != 0) {
+        Rect minRect;
+        int minArea = -1;
+        for (Rect r : detected_rects) {
+            if (r.area() < minArea || minArea == -1) {
+                minArea = r.area();
+                minRect = r;
+            }
+        }
+        if (detected_rects.size() > 1)
+            int a = 123;
+        rectangle(retMat, minRect, Scalar(0, 255, 0), 4);
+    }
+    if(detected_triangles.size() != 0) {
+        for(Triangle triangle : detected_triangles) {
+            line(retMat, triangle.p1, triangle.p2, Scalar(0, 255, 0), 4);
+            line(retMat, triangle.p2, triangle.p3, Scalar(0, 255, 0), 4);
+            line(retMat, triangle.p3, triangle.p1, Scalar(0, 255, 0), 4);
         }
     }
-
-    rectangle(retMat, minRect, Scalar(0, 255, 0), 4);
-
+    detected_triangles.clear();
     detected_rects.clear();
 }
 
@@ -100,20 +117,48 @@ void find_shapes(Mat mat) {
             contours = contours->h_next;
             continue;
         }
+        if(cvCheckContourConvexity(result)) {
+            int a = 123;
+        }
         //if there are 3  vertices  in the contour(It should be a triangle)
         if (result->total == 3) {
-            /*
+
             //iterating through each point
             CvPoint *pt[3];
             for (int i = 0; i < 3; i++) {
                 pt[i] = (CvPoint *) cvGetSeqElem(result, i);
             }
+            int min_x = 10000;
+            int min_y = 10000;
+            int max_x = 0;
+            int max_y = 0;
 
-            //drawing lines around the triangle
-            cvLine(img, *pt[0], *pt[1], cvScalar(255, 0, 0), 4);
-            cvLine(img, *pt[1], *pt[2], cvScalar(255, 0, 0), 4);
-            cvLine(img, *pt[2], *pt[0], cvScalar(255, 0, 0), 4);
-            */
+            for (int i = 0; i < 3; i++) {
+                CvPoint *p = pt[i];
+                if (p->x > max_x)
+                    max_x = p->x;
+                if (p->x < min_x)
+                    min_x = p->x;
+                if (p->y > max_y)
+                    max_y = p->y;
+                if (p->y < min_y)
+                    min_y = p->y;
+            }
+
+            //CvPoint p1(min_x, min_y);
+            //CvPoint p2(max_x, min_y);
+            //CvPoint p3(max_x, max_y);
+            P1 = Point(pt[0]->x, pt[0]->y);
+            P2 = Point(pt[1]->x, pt[1]->y);
+            P3 = Point(pt[2]->x, pt[2]->y);
+
+            cvSetImageROI(img, cvRect(min_x, min_y, max_x - min_x, max_y - min_y));
+            retMat.adjustROI(min_x, min_y, max_x - min_x, max_y - min_y);
+            cv::Mat mat123 = cv::cvarrToMat(img);
+
+            //   Mat mat1 = Mat(mat123, rect);
+            orb(mat123, 3);
+
         }
             //if there are 4 vertices in the contour(It should be a quadrilateral)
         else if (result->total == 4) {
@@ -161,7 +206,7 @@ void find_shapes(Mat mat) {
             cv::Mat mat123 = cv::cvarrToMat(img);
             Rect rect = Rect(min_x, min_y, max_x - min_x, max_y - min_y);
             //   Mat mat1 = Mat(mat123, rect);
-            orb(mat, 4);
+            orb(mat123, 4);
             //       cvAddS(img, cvScalar(0, 255, 0), img);
 
             /*
@@ -268,7 +313,12 @@ void orb(Mat mat, int corners) {
         Mat homography = findHomography(goodReferencePoints, goodTargetPoints, RANSAC, 5);
 
         if (!homography.empty()) {
-            detected_rects.push_back(Rect(P1.x, P1.y, P2.x - P1.x, P4.y - P1.y));
+            int code = filter.code;
+            if(corners == 4)
+                detected_rects.push_back(Rect(P1.x, P1.y, P2.x - P1.x, P4.y - P1.y));
+            else
+                if(corners == 3)
+                    detected_triangles.push_back(Triangle(Point(P1.x, P1.y), Point(P2.x, P2.y), Point(P3.x, P3.y)));
         }
     }
 
@@ -383,7 +433,7 @@ Java_com_handen_roadhelper_MainActivity_addFilter(JNIEnv *env, jobject instance,
     cv::Mat referenceDescriptors;
     orbDetector->detectAndCompute(mat, noArray(), referenceKeypoints, referenceDescriptors);
 
-    filters.push_back(Filter(corners, referenceKeypoints, referenceDescriptors));
+    filters.push_back(Filter(code, corners, referenceKeypoints, referenceDescriptors));
 }
 
 
