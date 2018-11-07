@@ -27,7 +27,7 @@ BFMatcher matcher(NORM_HAMMING);
 
 Mat retMat;
 std::vector<Rect>  detected_rects;
-Point2f P1,P2,P3,P4;
+Point P1,P2,P3,P4;
 vector<pair<vector<cv::KeyPoint>, cv::Mat> > filters;
 
 void orb(Mat mat);
@@ -86,12 +86,12 @@ void find_shapes(Mat mat) {
     //finding all contours in the image
    // cvFindContours(imgGrayScale, storage, &contours, sizeof(CvContour), CV_RETR_LIST,
    //                CV_CHAIN_APPROX_SIMPLE, cvPoint(0, 0));
-    vector<Mat>  contours;
+    vector<vector <Point> >  contours;
     findContours(matGray, contours, RETR_LIST, CHAIN_APPROX_SIMPLE, Point(0, 0));
-    vector<Point2d> result;
+    vector <Point> result;
 
     //iterating through each contour
-    for(vector<Point2d> contour : contours) {
+    for(vector <Point> contour : contours) {
         //obtain a sequence of points of contour, pointed by the variable 'contour'
         //result = cvApproxPoly(contours, sizeof(CvContour), storage, CV_POLY_APPROX_DP,
         //                      cvContourPerimeter(contours) * 0.05, 0);
@@ -117,7 +117,7 @@ void find_shapes(Mat mat) {
             //if there are 4 vertices in the contour(It should be a quadrilateral)
         else if (result.size() == 4) {
             //iterating through each point
-            Point2d points[4];
+            Point points[4];
             //CvPoint *points[4];
             for (int i = 0; i < 4; i++) {
                 points[1] = result[i];
@@ -141,10 +141,10 @@ void find_shapes(Mat mat) {
                     min_y = points[i].y;
             }
 
-            Point2d p1(min_x, min_y);
-            Point2d p2(max_x, min_y);
-            Point2d p3(max_x, max_y);
-            Point2d p4(min_x, max_y);
+            Point p1(min_x, min_y);
+            Point p2(max_x, min_y);
+            Point p3(max_x, max_y);
+            Point p4(min_x, max_y);
             P1 = p1;
             P2 = p2;
             P3 = p3;
@@ -160,7 +160,7 @@ void find_shapes(Mat mat) {
          //   cvSetImageROI(img, cvRect(min_x, min_y, max_x - min_x, max_y - min_y));
             retMat.adjustROI(min_x, min_y, max_x - min_x, max_y - min_y);
      //       cv::Mat mat123 = cv::cvarrToMat(img);
-            Rect rect = Rect(min_x, min_y, max_x - min_x, max_y - min_y);
+       //     Rect rect = Rect(min_x, min_y, max_x - min_x, max_y - min_y);
          //   Mat mat1 = Mat(mat123, rect);
             orb(mat);
             //       cvAddS(img, cvScalar(0, 255, 0), img);
@@ -272,11 +272,11 @@ void orb(Mat mat) {
 
         if(minDist > 50.0) {
             targetCorners = Mat(0, 0, CV_32FC2);
-            return;
+            continue;
         }
         else {
             if(minDist > 25.0) {
-                return;
+                continue;
             }
         }
 
