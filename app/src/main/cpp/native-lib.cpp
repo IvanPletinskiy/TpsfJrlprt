@@ -7,10 +7,14 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/features2d/features2d.hpp>
+#include "Filter.cpp"
 //#include "Java_com_handen_roadhelper_MainActivity_nativeOnFrame.h"
 using namespace std;
 
 using namespace cv;
+
+#define _GLIBCXX_HAVE_WCSTOF 1
+#define _GLIBCXX_USE_C99 1
 
 void find_shapes(Mat mat);
 
@@ -22,15 +26,16 @@ Rect createRect();
 
 Mat pedastrian;
 
-BFMatcher matcher(NORM_HAMMING);
+//BFMatcher matcher(NORM_HAMMING);
 
 
 Mat retMat;
-std::vector<Rect>  detected_rects;
-Point P1,P2,P3,P4;
-vector<pair<vector<cv::KeyPoint>, cv::Mat> > filters;
+std::vector<Rect> detected_rects;
+Point P1, P2, P3, P4;
 
-void orb(Mat mat);
+vector<Filter> filters;
+
+void orb(Mat mat, int corners);
 
 extern "C" void JNICALL
 Java_com_handen_roadhelper_MainActivity_nativeOnFrame(JNIEnv *env, jobject instance,
@@ -54,8 +59,8 @@ Java_com_handen_roadhelper_MainActivity_nativeOnFrame(JNIEnv *env, jobject insta
 
     Rect minRect;
     int minArea = -1;
-    for(Rect r : detected_rects) {
-        if(r.area() < minArea || minArea == -1) {
+    for (Rect r : detected_rects) {
+        if (r.area() < minArea || minArea == -1) {
             minArea = r.area();
             minRect = r;
         }
@@ -67,40 +72,36 @@ Java_com_handen_roadhelper_MainActivity_nativeOnFrame(JNIEnv *env, jobject insta
 }
 
 void find_shapes(Mat mat) {
-  //  IplImage *img = NULL;
-  //  img = cvCreateImage(cvSize(mat.cols, mat.rows), 8, 3);
-  //  IplImage ipltemp = mat;
-  //  img = &ipltemp;
-    Mat matGray(mat.cols, mat.rows, 8 , 1);
-    cvtColor(mat, matGray, CV_RGB2GRAY);
-  //  IplImage *imgGrayScale = cvCreateImage(cvGetSize(img), 8, 1);
-  //  cvCvtColor(img, imgGrayScale, CV_RGBA2GRAY);
-    threshold(matGray, matGray, 128, 255, THRESH_BINARY);
-    //thresholding the grayscale image to get better results
-    //cvThreshold(imgGrayScale, imgGrayScale, 128, 255, CV_THRESH_BINARY);
+    IplImage *img = NULL;
+    img = cvCreateImage(cvSize(mat.cols, mat.rows), 8, 3);
+    IplImage ipltemp = mat;
+    img = &ipltemp;
 
- //   CvSeq *contours = NULL;  //hold the pointer to a contour in the memory block
-//    CvSeq *result = NULL;   //hold sequence of points of a contour
-//    CvMemStorage *storage = cvCreateMemStorage(0); //storage area for all contours
+    IplImage *imgGrayScale = cvCreateImage(cvGetSize(img), 8, 1);
+    cvCvtColor(img, imgGrayScale, CV_RGBA2GRAY);
+
+    //thresholding the grayscale image to get better results
+    cvThreshold(imgGrayScale, imgGrayScale, 128, 255, CV_THRESH_BINARY);
+
+    CvSeq *contours = NULL;  //hold the pointer to a contour in the memory block
+    CvSeq *result = NULL;   //hold sequence of points of a contour
+    CvMemStorage *storage = cvCreateMemStorage(0); //storage area for all contours
 
     //finding all contours in the image
-   // cvFindContours(imgGrayScale, storage, &contours, sizeof(CvContour), CV_RETR_LIST,
-   //                CV_CHAIN_APPROX_SIMPLE, cvPoint(0, 0));
-    vector<vector <Point> >  contours;
-    findContours(matGray, contours, RETR_LIST, CHAIN_APPROX_SIMPLE, Point(0, 0));
-    vector <Point> result;
+    cvFindContours(imgGrayScale, storage, &contours, sizeof(CvContour), CV_RETR_LIST,
+                   CV_CHAIN_APPROX_SIMPLE, cvPoint(0, 0));
 
     //iterating through each contour
-    for(vector <Point> contour : contours) {
+    while (contours) {
         //obtain a sequence of points of contour, pointed by the variable 'contour'
-        //result = cvApproxPoly(contours, sizeof(CvContour), storage, CV_POLY_APPROX_DP,
-        //                      cvContourPerimeter(contours) * 0.05, 0);
-        approxPolyDP(contour, result, 0.05, false); //TODO мб попробовать true
-        if (contourArea(result) < 100) {
+        result = cvApproxPoly(contours, sizeof(CvContour), storage, CV_POLY_APPROX_DP,
+                              cvContourPerimeter(contours) * 0.05, 0);
+        if (cvContourArea(result) < 100) {
+            contours = contours->h_next;
             continue;
         }
         //if there are 3  vertices  in the contour(It should be a triangle)
-        if (result.size() == 3) {
+        if (result->total == 3) {
             /*
             //iterating through each point
             CvPoint *pt[3];
@@ -115,36 +116,34 @@ void find_shapes(Mat mat) {
             */
         }
             //if there are 4 vertices in the contour(It should be a quadrilateral)
-        else if (result.size() == 4) {
+        else if (result->total == 4) {
             //iterating through each point
-            Point points[4];
-            //CvPoint *points[4];
+            CvPoint *pt[4];
             for (int i = 0; i < 4; i++) {
-                points[1] = result[i];
+                pt[i] = (CvPoint *) cvGetSeqElem(result, i);
             }
 
-            double min_x = 10000;
-            double min_y = 10000;
-            double max_x = 0;
-            double max_y = 0;
+            int min_x = 10000;
+            int min_y = 10000;
+            int max_x = 0;
+            int max_y = 0;
 
             for (int i = 0; i < 4; i++) {
-               // CvPoint *p = points[i];
-
-                if (points[i].x > max_x)
-                    max_x = points[i].x;
-                if (points[i].x < min_x)
-                    min_x = points[i].x;
-                if (points[i].y > max_y)
-                    max_y = points[i].y;
-                if (points[i].y < min_y)
-                    min_y = points[i].y;
+                CvPoint *p = pt[i];
+                if (p->x > max_x)
+                    max_x = p->x;
+                if (p->x < min_x)
+                    min_x = p->x;
+                if (p->y > max_y)
+                    max_y = p->y;
+                if (p->y < min_y)
+                    min_y = p->y;
             }
 
-            Point p1(min_x, min_y);
-            Point p2(max_x, min_y);
-            Point p3(max_x, max_y);
-            Point p4(min_x, max_y);
+            CvPoint p1(min_x, min_y);
+            CvPoint p2(max_x, min_y);
+            CvPoint p3(max_x, max_y);
+            CvPoint p4(min_x, max_y);
             P1 = p1;
             P2 = p2;
             P3 = p3;
@@ -157,25 +156,25 @@ void find_shapes(Mat mat) {
             cvLine(img, p4, p1, cvScalar(0, 255, 0), 4);
 */
 
-         //   cvSetImageROI(img, cvRect(min_x, min_y, max_x - min_x, max_y - min_y));
+            cvSetImageROI(img, cvRect(min_x, min_y, max_x - min_x, max_y - min_y));
             retMat.adjustROI(min_x, min_y, max_x - min_x, max_y - min_y);
-     //       cv::Mat mat123 = cv::cvarrToMat(img);
-       //     Rect rect = Rect(min_x, min_y, max_x - min_x, max_y - min_y);
-         //   Mat mat1 = Mat(mat123, rect);
-            orb(mat);
+            cv::Mat mat123 = cv::cvarrToMat(img);
+            Rect rect = Rect(min_x, min_y, max_x - min_x, max_y - min_y);
+            //   Mat mat1 = Mat(mat123, rect);
+            orb(mat, 4);
             //       cvAddS(img, cvScalar(0, 255, 0), img);
 
             /*
             //drawing lines around the quadrilateral
-            cvLine(img, *points[0], *points[1], cvScalar(0, 255, 0), 4);
-            cvLine(img, *points[1], *points[2], cvScalar(0, 255, 0), 4);
-            cvLine(img, *points[2], *points[3], cvScalar(0, 255, 0), 4);
-            cvLine(img, *points[3], *points[0], cvScalar(0, 255, 0), 4);
+            cvLine(img, *pt[0], *pt[1], cvScalar(0, 255, 0), 4);
+            cvLine(img, *pt[1], *pt[2], cvScalar(0, 255, 0), 4);
+            cvLine(img, *pt[2], *pt[3], cvScalar(0, 255, 0), 4);
+            cvLine(img, *pt[3], *pt[0], cvScalar(0, 255, 0), 4);
             */
             //      detect_square_sign();
         }
             //if there are 7  vertices  in the contour(It should be a heptagon)
-        else if (result.size() == 7) {
+        else if (result->total == 7) {
             /*
             //iterating through each point
             CvPoint *pt[7];
@@ -193,67 +192,38 @@ void find_shapes(Mat mat) {
             cvLine(img, *pt[6], *pt[0], cvScalar(0, 0, 255), 4);
              */
         }
-  //      retMat.()
+        //      retMat.()
         //obtain the next contour
-       // contours = contours->h_next;
+        contours = contours->h_next;
     }
-    /*
     if (storage)
         cvReleaseMemStorage(&storage);
     if (imgGrayScale)
         cvReleaseImage(&imgGrayScale);
-        */
 }
 
-
-extern "C" void JNICALL
-Java_com_handen_roadhelper_MainActivity_addFilter(JNIEnv *env, jobject instance,
-                                                      jlong matAddr) {
-    Ptr<ORB> orbDetector = ORB::create();
-    Mat mat = *(Mat *) matAddr;
-    resize(mat, mat, Size(200, 200));
-    if(mat.channels() == 3)
-        cv::cvtColor(mat, mat, CV_BGR2GRAY);
-    else
-        if(mat.channels() == 4)
-            cv::cvtColor(mat, mat, CV_BGRA2GRAY);
-
-    threshold(mat, mat, 128, 255, CV_THRESH_BINARY);
-    int a = mat.channels();
-    std::vector<cv::KeyPoint> referenceKeypoints;
-    cv::Mat referenceDescriptors;
-    orbDetector->detectAndCompute(mat, noArray(), referenceKeypoints, referenceDescriptors);
-
-    filters.push_back(pair<vector<cv::KeyPoint>, cv::Mat>(referenceKeypoints, referenceDescriptors));
-}
-
-void orb(Mat mat) {
+void orb(Mat mat, int corners) {
     //  Mat(const IplImage* pImage, bool copyData=false);
     Ptr<ORB> orbDetector = ORB::create();
 
-   // cv::Mat mat = cv::cvarrToMat(pImage);
+    // cv::Mat mat = cv::cvarrToMat(pImage);
     resize(mat, mat, Size(200, 200));
-    for(pair<vector<cv::KeyPoint>, cv::Mat> p : filters) {
+    for (Filter filter : filters) {
+        if(filter.corners != corners)
+            continue;
         std::vector<Point2f> targetCorners(4);
-
         std::vector<cv::KeyPoint> targetKeypoints;
-
         cv::Mat targetDescriptors;
-
-        //  DescriptorMatcher matcher = DescriptorMatcher();
-
+        BFMatcher matcher(NORM_HAMMING);
         orbDetector->detectAndCompute(mat, noArray(), targetKeypoints, targetDescriptors);
-     //   orbDetector->detectAndCompute(pedastrian, noArray(), p.first, p.second);
 
-        //Match images based on k nearest neighbour
-        //std::vector<std::vector<cv::DMatch> > matches;
         std::vector<DMatch> matches;
-        matcher.match(targetDescriptors, p.second,
+        matcher.match(targetDescriptors, filter.descriptors,
                       matches, noArray());
 
         if (matches.size() < 4) {
             //There are too few matches to find the homogrhaphy
-            return;
+            continue;
         }
 
         //Calculate the max and min distances between keypoints
@@ -262,20 +232,18 @@ void orb(Mat mat) {
 
         for (DMatch match : matches) {
             double dist = match.distance;
-            if(dist < minDist) {
+            if (dist < minDist) {
                 minDist = dist;
             }
-            if(dist > maxDist) {
+            if (dist > maxDist) {
                 maxDist = dist;
             }
         }
 
-        if(minDist > 50.0) {
-            targetCorners = Mat(0, 0, CV_32FC2);
+        if (minDist > 50.0) {
             continue;
-        }
-        else {
-            if(minDist > 25.0) {
+        } else {
+            if (minDist > 25.0) {
                 continue;
             }
         }
@@ -284,22 +252,22 @@ void orb(Mat mat) {
         std::vector<cv::Point> goodReferencePoints;
 
         double maxGoodMatchDist = 1.75 * minDist;
-        for(DMatch match : matches) {
-            if(match.distance < maxGoodMatchDist) {
-                goodReferencePoints.push_back(p.first[match.trainIdx].pt);
+        for (DMatch match : matches) {
+            if (match.distance < maxGoodMatchDist) {
+                goodReferencePoints.push_back(filter.keypoints[match.trainIdx].pt);
                 goodTargetPoints.push_back(targetKeypoints[match.queryIdx].pt);
             }
         }
 
-        if(goodTargetPoints.size() < 4 ||
-           goodReferencePoints.size() < 4) {
+        if (goodTargetPoints.size() < 4 ||
+            goodReferencePoints.size() < 4) {
             // There are too few good points to find the homography.
             return;
         }
 
         Mat homography = findHomography(goodReferencePoints, goodTargetPoints, RANSAC, 5);
 
-        if(!homography.empty()) {
+        if (!homography.empty()) {
             detected_rects.push_back(Rect(P1.x, P1.y, P2.x - P1.x, P4.y - P1.y));
         }
     }
@@ -395,8 +363,28 @@ void orb(Mat mat) {
         line(retMat, P3, P4, Scalar(0, 255, 0), 4);
         line(retMat, P4, P1, Scalar(0, 255, 0), 4);
 */
-    }
+}
+extern "C" void JNICALL
+Java_com_handen_roadhelper_MainActivity_addFilter(JNIEnv *env, jobject instance,
+                                                  jlong matAddr, jint code, jint corners) {
+    Ptr<ORB> orbDetector = ORB::create();
+    Mat mat = *(Mat *) matAddr;
+    if(mat.empty())
+        return;
+    resize(mat, mat, Size(200, 200));
+    if (mat.channels() == 3)
+        cv::cvtColor(mat, mat, CV_BGR2GRAY);
+    else if (mat.channels() == 4)
+        cv::cvtColor(mat, mat, CV_BGRA2GRAY);
 
+    threshold(mat, mat, 128, 255, CV_THRESH_BINARY);
+    int a = mat.channels();
+    std::vector<cv::KeyPoint> referenceKeypoints;
+    cv::Mat referenceDescriptors;
+    orbDetector->detectAndCompute(mat, noArray(), referenceKeypoints, referenceDescriptors);
+
+    filters.push_back(Filter(corners, referenceKeypoints, referenceDescriptors));
+}
 
 
 /// Show the image

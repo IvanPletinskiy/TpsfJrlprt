@@ -62,31 +62,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         _cameraBridgeViewBase.setCvCameraViewListener(this);
     }
 
-    private void initializeImages() {
-        Mat pedastrian = null;
-        try {
-            pedastrian = Utils.loadResource(getApplicationContext(),
-                    R.drawable.pedastrian,
-                    Imgcodecs.CV_LOAD_IMAGE_COLOR
-            );
-        }
-        catch(IOException e) {
-            e.printStackTrace();
-        }
-        addFilter(pedastrian.getNativeObjAddr());
-        Mat znak27 = null;
-        try {
-            znak27 = Utils.loadResource(getApplicationContext(),
-                    R.drawable.znak27,
-                    Imgcodecs.CV_LOAD_IMAGE_COLOR
-            );
-        }
-        catch(IOException e) {
-            e.printStackTrace();
-        }
-    //    addFilter(znak27.getNativeObjAddr()); //FIXME
-    }
-
     @Override
     public void onPause() {
         super.onPause();
@@ -126,6 +101,33 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
     }
 
+    private void initializeImages() {
+        Mat pedastrian = null;
+        try {
+            pedastrian = Utils.loadResource(getApplicationContext(),
+                    R.drawable.pedastrian,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR
+            );
+        }
+        catch(IOException e) {
+            e.printStackTrace();
+        }
+        addFilter(pedastrian.getNativeObjAddr(), 5612, 4);
+
+        Mat znak27 = null;
+        try {
+            znak27 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.znak27,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR
+            );
+        }
+        catch(IOException e) {
+            e.printStackTrace();
+        }
+
+        addFilter(znak27.getNativeObjAddr(), 27, 4);
+    }
+
     public void onDestroy() {
         super.onDestroy();
         disableCamera();
@@ -155,7 +157,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     public native void nativeOnFrame(long matAddrGray, int nbrElem);
-    public native void addFilter(long matAddr);
+    public native void addFilter(long matAddr, int code, int corners);
+  //  public native void addFilter(long matAddr, int code, int corners);
 }
 
 
