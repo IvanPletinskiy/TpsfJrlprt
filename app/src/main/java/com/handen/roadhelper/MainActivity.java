@@ -153,6 +153,17 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             e.printStackTrace();
         }
         addFilter(sign121.getNativeObjAddr(), 121, 3);
+        Mat sign324_60 = null;
+        try {
+            sign324_60 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.sign324_60,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR
+            );
+        }
+        catch(IOException e) {
+            e.printStackTrace();
+        }
+        addFilter(sign324_60.getNativeObjAddr(), 32460, 0);
 
         isFilterAdded = true;
     }

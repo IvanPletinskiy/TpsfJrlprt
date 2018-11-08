@@ -9,6 +9,7 @@
 #include <opencv2/features2d/features2d.hpp>
 #include "Filter.cpp"
 #include "Triangle.cpp"
+#include "Circle.cpp"
 //#include "Java_com_handen_roadhelper_MainActivity_nativeOnFrame.h"
 using namespace std;
 
@@ -33,11 +34,13 @@ Mat pedastrian;
 Mat retMat;
 std::vector<Rect> detected_rects;
 vector<Triangle> detected_triangles;
+vector<Circle> detected_circles;
 Point P1, P2, P3, P4;
-
+CvPoint CENTER;
+long RADIUS;
 vector<Filter> filters;
 
-void orb(Mat mat, int corners);
+bool orb(Mat mat, int corners);
 
 void draw_detected_shapes();
 
@@ -45,26 +48,22 @@ extern "C" void JNICALL
 Java_com_handen_roadhelper_MainActivity_nativeOnFrame(JNIEnv *env, jobject instance,
                                                       jlong matAddr,
                                                       jint nbrElem) {
-    //TODO warpPerspective() позволяет выровнять матрицу на плоскости
-    int64 e1 = cv::getTickCount();
-
+    // int64 e1 = cv::getTickCount();
     retMat = *(Mat *) matAddr;
     blur(retMat, retMat, Size(5, 5));
-
+    //cvtColor(retMat, retMat, CV_RGB2GRAY);
+   // threshold(retMat, retMat, 192, 255, CV_THRESH_BINARY);
     find_shapes(retMat);
-
-
-    char cbuff[20];
-    int64 e2 = cv::getTickCount();
-    float time = (e2 - e1) / cv::getTickFrequency();
-    sprintf(cbuff, "%f sec", time);
-    putText(retMat, cbuff, CvPoint(30, 30), FONT_HERSHEY_COMPLEX, 1.0, cvScalar(255, 255, 255));
-
+    // char cbuff[20];
+    // int64 e2 = cv::getTickCount();
+    //  float time = (e2 - e1) / cv::getTickFrequency();
+    //   sprintf(cbuff, "%f sec", time);
+    // putText(retMat, cbuff, CvPoint(30, 30), FONT_HERSHEY_COMPLEX, 1.0, cvScalar(255, 255, 255));
     draw_detected_shapes();
 }
 
 void draw_detected_shapes() {
-    if(detected_rects.size() != 0) {
+    if (detected_rects.size() != 0) {
         Rect minRect;
         int minArea = -1;
         for (Rect r : detected_rects) {
@@ -75,17 +74,42 @@ void draw_detected_shapes() {
         }
         if (detected_rects.size() > 1)
             int a = 123;
-        rectangle(retMat, minRect, Scalar(0, 255, 0), 4);
+        rectangle(retMat, minRect, Scalar(0, 255, 0), 6);
     }
-    if(detected_triangles.size() != 0) {
-        for(Triangle triangle : detected_triangles) {
-            line(retMat, triangle.p1, triangle.p2, Scalar(0, 255, 0), 4);
-            line(retMat, triangle.p2, triangle.p3, Scalar(0, 255, 0), 4);
-            line(retMat, triangle.p3, triangle.p1, Scalar(0, 255, 0), 4);
+    if (detected_triangles.size() != 0) {
+        Triangle maxTriangle;
+        double maxSum = -1;
+        for (Triangle triangle : detected_triangles) {
+            double a1 =
+                    ((triangle.p2.x - triangle.p1.x) ^ 2) + ((triangle.p2.y - triangle.p1.y) ^ 2);
+            double a2 =
+                    ((triangle.p3.x - triangle.p2.x) ^ 2) + ((triangle.p3.y - triangle.p2.y) ^ 2);
+            double a3 =
+                    ((triangle.p3.x - triangle.p1.x) ^ 2) + ((triangle.p3.y - triangle.p1.y) ^ 2);
+            if (maxSum == -1 || (a1 + a2 + a3) > maxSum) {
+                maxSum = a1 + a2 + a3;
+                maxTriangle = triangle;
+            }
         }
+        line(retMat, maxTriangle.p1, maxTriangle.p2, Scalar(0, 255, 0), 6);
+        line(retMat, maxTriangle.p2, maxTriangle.p3, Scalar(0, 255, 0), 6);
+        line(retMat, maxTriangle.p3, maxTriangle.p1, Scalar(0, 255, 0), 6);
     }
+    if (detected_circles.size() != 0) {
+        Circle minCircle;
+        int minRadius = -1;
+        for (Circle c : detected_circles) {
+            if (c.radius == -1 || c.radius < minRadius) {
+                minRadius = c.radius;
+                minCircle = c;
+            }
+        }
+        circle(retMat, minCircle.center, minCircle.radius, Scalar(0, 255, 0), 4);
+    }
+
     detected_triangles.clear();
     detected_rects.clear();
+    detected_circles.clear();
 }
 
 void find_shapes(Mat mat) {
@@ -117,9 +141,33 @@ void find_shapes(Mat mat) {
             contours = contours->h_next;
             continue;
         }
+        //if circle
+        /*
         if(cvCheckContourConvexity(result)) {
-            int a = 123;
+            CvPoint *pt[result->total];
+            for(int i = 0; i < result->total; ++i) {
+                pt[i] = (CvPoint *) cvGetSeqElem(result, i);
+            }
+            CvRect rect  = cvBoundingRect(result);
+            CvPoint2D32f p0;
+            CvPoint2D32f *p = &p0;
+            float f = 0;
+            float *r = &f;
+            cvMinEnclosingCircle(result, p, r);
+            if(p == nullptr || r == nullptr) {
+                contours = contours->h_next;
+            }
+
+            CENTER = CvPoint(p->x, p->y);
+            RADIUS = (long) &r;
+   //         Rect rect1(rect.x, rect.y, rect.width, rect.height);
+    //        rectangle(retMat, rect1, Scalar(255, 0, 0), 4);
+            cvSetImageROI(img, cvRect(rect.x, rect.y, rect.width, rect.height));
+            retMat.adjustROI(rect.x, rect.y, rect.width, rect.height);
+            cv::Mat mat123 = cv::cvarrToMat(img);
+            orb(mat123, 0);
         }
+         */
         //if there are 3  vertices  in the contour(It should be a triangle)
         if (result->total == 3) {
 
@@ -155,10 +203,10 @@ void find_shapes(Mat mat) {
             cvSetImageROI(img, cvRect(min_x, min_y, max_x - min_x, max_y - min_y));
             retMat.adjustROI(min_x, min_y, max_x - min_x, max_y - min_y);
             cv::Mat mat123 = cv::cvarrToMat(img);
-
             //   Mat mat1 = Mat(mat123, rect);
-            orb(mat123, 3);
-
+            if (orb(mat123, 3)) {
+             //   break;
+            }
         }
             //if there are 4 vertices in the contour(It should be a quadrilateral)
         else if (result->total == 4) {
@@ -206,7 +254,11 @@ void find_shapes(Mat mat) {
             cv::Mat mat123 = cv::cvarrToMat(img);
             Rect rect = Rect(min_x, min_y, max_x - min_x, max_y - min_y);
             //   Mat mat1 = Mat(mat123, rect);
-            orb(mat123, 4);
+
+            if (orb(mat123, 4)) {
+        //
+                //        break;
+            }
             //       cvAddS(img, cvScalar(0, 255, 0), img);
 
             /*
@@ -247,14 +299,15 @@ void find_shapes(Mat mat) {
         cvReleaseImage(&imgGrayScale);
 }
 
-void orb(Mat mat, int corners) {
+bool orb(Mat mat, int corners) {
+
     //  Mat(const IplImage* pImage, bool copyData=false);
     Ptr<ORB> orbDetector = ORB::create();
 
     // cv::Mat mat = cv::cvarrToMat(pImage);
     resize(mat, mat, Size(200, 200));
     for (Filter filter : filters) {
-        if(filter.corners != corners)
+        if (filter.corners != corners)
             continue;
         std::vector<Point2f> targetCorners(4);
         std::vector<cv::KeyPoint> targetKeypoints;
@@ -307,20 +360,25 @@ void orb(Mat mat, int corners) {
         if (goodTargetPoints.size() < 4 ||
             goodReferencePoints.size() < 4) {
             // There are too few good points to find the homography.
-            return;
+            return false;
         }
 
         Mat homography = findHomography(goodReferencePoints, goodTargetPoints, RANSAC, 5);
 
         if (!homography.empty()) {
-            int code = filter.code;
-            if(corners == 4)
+            if (corners == 4)
                 detected_rects.push_back(Rect(P1.x, P1.y, P2.x - P1.x, P4.y - P1.y));
-            else
-                if(corners == 3)
-                    detected_triangles.push_back(Triangle(Point(P1.x, P1.y), Point(P2.x, P2.y), Point(P3.x, P3.y)));
+            else if (corners == 3)
+                detected_triangles.push_back(
+                        Triangle(Point(P1.x, P1.y), Point(P2.x, P2.y), Point(P3.x, P3.y)));
+            else if (corners == 0) {
+                detected_circles.push_back(Circle(RADIUS, CENTER));
+            }
+            return true;
+            break;
         }
     }
+    return false;
 
     /*
     std::vector<Point2f> referenceCorners;
@@ -414,12 +472,13 @@ void orb(Mat mat, int corners) {
         line(retMat, P4, P1, Scalar(0, 255, 0), 4);
 */
 }
+
 extern "C" void JNICALL
 Java_com_handen_roadhelper_MainActivity_addFilter(JNIEnv *env, jobject instance,
                                                   jlong matAddr, jint code, jint corners) {
     Ptr<ORB> orbDetector = ORB::create();
     Mat mat = *(Mat *) matAddr;
-    if(mat.empty())
+    if (mat.empty())
         return;
     resize(mat, mat, Size(200, 200));
     if (mat.channels() == 3)
