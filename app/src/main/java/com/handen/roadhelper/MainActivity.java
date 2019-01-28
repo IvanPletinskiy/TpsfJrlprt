@@ -25,11 +25,14 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private static final String TAG = "OCVSample::Activity";
     private CameraBridgeViewBase _cameraBridgeViewBase;
     static boolean isFilterAdded = false;
+    private String signsString = "";
+    int signCode = -1;
+   // Mat code = new Mat(1, 1, 0);
 
     private BaseLoaderCallback _baseLoaderCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
-            switch (status) {
+            switch(status) {
                 case LoaderCallbackInterface.SUCCESS: {
                     Log.i(TAG, "OpenCV loaded successfully");
                     // Load ndk built module, as specified in moduleName in build.gradle
@@ -72,10 +75,11 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     @Override
     public void onResume() {
         super.onResume();
-        if (!OpenCVLoader.initDebug()) {
+        if(!OpenCVLoader.initDebug()) {
             Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
             OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, _baseLoaderCallback);
-        } else {
+        }
+        else {
             Log.d(TAG, "OpenCV library found inside package. Using it!");
             _baseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
@@ -83,14 +87,15 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
-        switch (requestCode) {
+        switch(requestCode) {
             case 1: {
                 // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 0
+                if(grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     // permission was granted, yay! Do the
                     // contacts-related task you need to do.
-                } else {
+                }
+                else {
                     // permission denied, boo! Disable the
                     // functionality that depends on this permission.
                     Toast.makeText(MainActivity.this, "Permission denied to read your External storage", Toast.LENGTH_SHORT).show();
@@ -103,68 +108,56 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     private void initializeImages() {
-        if(isFilterAdded)
+        if(isFilterAdded) {
             return;
+        }
         Mat pedastrian = null;
         try {
             pedastrian = Utils.loadResource(getApplicationContext(),
-                    R.drawable.pedastrian,
+                    R.drawable.sign5162,
                     Imgcodecs.CV_LOAD_IMAGE_COLOR
             );
-        }
-        catch(IOException e) {
-            e.printStackTrace();
-        }
-        addFilter(pedastrian.getNativeObjAddr(), 5612, 4);
 
-        Mat sign27 = new Mat();
-        try {
+            addFilter(pedastrian.getNativeObjAddr(), 5612, 4);
+
+            Mat sign27 = new Mat();
+
             sign27 = Utils.loadResource(getApplicationContext(),
-                    R.drawable.znak27,
-                    Imgcodecs.CV_LOAD_IMAGE_ANYCOLOR
-            );
-        }
-        catch(IOException e) {
-            e.printStackTrace();
-        }
-
-        addFilter(sign27.getNativeObjAddr(), 27, 4);
-
-        Mat sign530 = null;
-        try {
-            sign530 = Utils.loadResource(getApplicationContext(),
-                    R.drawable.znak530,
+                    R.drawable.sign27,
                     Imgcodecs.CV_LOAD_IMAGE_COLOR
             );
-        }
-        catch(IOException e) {
-            e.printStackTrace();
-        }
-        addFilter(sign530.getNativeObjAddr(), 530, 4);
 
-        Mat sign121 = null;
-        try {
+            addFilter(sign27.getNativeObjAddr(), 27, 4);
+
+            Mat sign530 = null;
+
+            sign530 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.sign530,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR
+            );
+
+            addFilter(sign530.getNativeObjAddr(), 530, 4);
+
+            Mat sign121 = null;
+
             sign121 = Utils.loadResource(getApplicationContext(),
                     R.drawable.sign121,
                     Imgcodecs.CV_LOAD_IMAGE_COLOR
             );
-        }
-        catch(IOException e) {
-            e.printStackTrace();
-        }
-        addFilter(sign121.getNativeObjAddr(), 121, 3);
-        Mat sign324_60 = null;
-        try {
+
+            addFilter(sign121.getNativeObjAddr(), 121, 3);
+            Mat sign324_60 = null;
+
             sign324_60 = Utils.loadResource(getApplicationContext(),
                     R.drawable.sign324_60,
                     Imgcodecs.CV_LOAD_IMAGE_COLOR
             );
+
+            addFilter(sign324_60.getNativeObjAddr(), 32460, 0);
         }
         catch(IOException e) {
             e.printStackTrace();
         }
-        addFilter(sign324_60.getNativeObjAddr(), 32460, 0);
-
         isFilterAdded = true;
     }
 
@@ -174,8 +167,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     public void disableCamera() {
-        if (_cameraBridgeViewBase != null)
+        if(_cameraBridgeViewBase != null) {
             _cameraBridgeViewBase.disableView();
+        }
     }
 
     public void onCameraViewStarted(int width, int height) {
@@ -187,39 +181,25 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-   //     Mat matGray = inputFrame.gray();
+        signsString = "";
+        //     Mat matGray = inputFrame.gray();
         Mat matRgba = inputFrame.rgba();
-        nativeOnFrame(matRgba.getNativeObjAddr(), 2000);
-     //   Mat copyMat = new Mat();
-     //   matRgba.copyTo(copyMat);
-     //   matRgba = null;
+        nativeOnFrame(matRgba.getNativeObjAddr(), code.getNativeObjAddr());
+        //   Mat copyMat = new Mat();
+        //   matRgba.copyTo(copyMat);
+        //   matRgba = null;
+        if(code.get(0, 0)[0] > 0 ) {
+            Toast.makeText(MainActivity.this, "УРААААА", Toast.LENGTH_LONG).show();
+        }
+        if(signCode > 0)
+            Toast.makeText(MainActivity.this, "УРААААА", Toast.LENGTH_LONG).show();
+      //  if(signsString.length() > 0)
+      //      Toast.makeText(MainActivity.this, "УРААААА", Toast.LENGTH_LONG).show();
+
         return matRgba;
     }
 
-    public native void nativeOnFrame(long matAddrGray, int nbrElem);
+    public native void nativeOnFrame(long matAddrGray, long matAddrCode);
+
     public native void addFilter(long matAddr, int code, int corners);
 }
-
-
-/*
- // Used to load the 'native-lib' library on application startup.
-    static {
-        System.loadLibrary("native-lib");
-    }
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        // Example of a call to a native method
-        TextView tv = (TextView) findViewById(R.id.sample_text);
-        tv.setText(stringFromJNI());
-    }
-
-
-    // * A native method that is implemented by the 'native-lib' native library,
-    // * which is packaged with this application.
-
-public native String stringFromJNI();
- */

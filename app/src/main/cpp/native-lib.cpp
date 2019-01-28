@@ -10,6 +10,8 @@
 #include "Filter.cpp"
 #include "Triangle.cpp"
 #include "Circle.cpp"
+#include "string"
+#include "bits/stdc++.h"
 //#include "Java_com_handen_roadhelper_MainActivity_nativeOnFrame.h"
 using namespace std;
 
@@ -35,11 +37,12 @@ Mat retMat;
 std::vector<Rect> detected_rects;
 vector<Triangle> detected_triangles;
 vector<Circle> detected_circles;
+Mat sign_code;
 Point P1, P2, P3, P4;
 CvPoint CENTER;
 long RADIUS;
 vector<Filter> filters;
-
+string signs_string;
 bool orb(Mat mat, int corners);
 
 void draw_detected_shapes();
@@ -47,13 +50,15 @@ void draw_detected_shapes();
 extern "C" void JNICALL
 Java_com_handen_roadhelper_MainActivity_nativeOnFrame(JNIEnv *env, jobject instance,
                                                       jlong matAddr,
-                                                      jint nbrElem) {
+                                                      jlong sign_code_addr) {
     // int64 e1 = cv::getTickCount();
     retMat = *(Mat *) matAddr;
     blur(retMat, retMat, Size(5, 5));
     //cvtColor(retMat, retMat, CV_RGB2GRAY);
    // threshold(retMat, retMat, 192, 255, CV_THRESH_BINARY);
     find_shapes(retMat);
+    sign_code = * (Mat *) sign_code_addr;
+    signs_string = "";
     // char cbuff[20];
     // int64 e2 = cv::getTickCount();
     //  float time = (e2 - e1) / cv::getTickFrequency();
@@ -366,6 +371,11 @@ bool orb(Mat mat, int corners) {
         Mat homography = findHomography(goodReferencePoints, goodTargetPoints, RANSAC, 5);
 
         if (!homography.empty()) {
+        //    signs_string += to_string(filter.code);
+         //   signs_string += ';';
+          //  sign_code = filter.code;
+            sign_code.at<long>(0, 0) = filter.code;
+            //sign_code = filter.code;
             if (corners == 4)
                 detected_rects.push_back(Rect(P1.x, P1.y, P2.x - P1.x, P4.y - P1.y));
             else if (corners == 3)
@@ -375,102 +385,9 @@ bool orb(Mat mat, int corners) {
                 detected_circles.push_back(Circle(RADIUS, CENTER));
             }
             return true;
-            break;
         }
     }
     return false;
-
-    /*
-    std::vector<Point2f> referenceCorners;
-    referenceCorners.push_back(Point(0, 0));
-    referenceCorners.push_back(Point(pedastrian.cols, 0));
-    referenceCorners.push_back(Point(pedastrian.cols, pedastrian.rows));
-    referenceCorners.push_back(Point(0, pedastrian.rows));
-    */
-    /*
-    std::vector<Point2f> targetCorners(4);
-
-    std::vector<cv::KeyPoint> targetKeypoints;
-    std::vector<cv::KeyPoint> referenceKeypoints;
-
-    cv::Mat targetDescriptors;
-    cv::Mat referenceDescriptors;
-
-    //  DescriptorMatcher matcher = DescriptorMatcher();
-
-    orbDetector->detectAndCompute(mat, noArray(), targetKeypoints, targetDescriptors);
-    orbDetector->detectAndCompute(pedastrian, noArray(), referenceKeypoints, referenceDescriptors);
-
-    //Match images based on k nearest neighbour
-    //std::vector<std::vector<cv::DMatch> > matches;
-    std::vector<DMatch> matches;
-    matcher.match(targetDescriptors, referenceDescriptors,
-                  matches, noArray());
-
-    if (matches.size() < 4) {
-        //There are too few matches to find the homogrhaphy
-        return;
-    }
-
-    //Calculate the max and min distances between keypoints
-    double maxDist = 0.0;
-    double minDist = 100000;
-
-    for (DMatch match : matches) {
-        double dist = match.distance;
-        if(dist < minDist) {
-            minDist = dist;
-        }
-        if(dist > maxDist) {
-            maxDist = dist;
-        }
-    }
-
-    if(minDist > 50.0) {
-        targetCorners = Mat(0, 0, CV_32FC2);
-        return;
-    }
-    else {
-        if(minDist > 25.0) {
-            return;
-        }
-    }
-
-    std::vector<cv::Point> goodTargetPoints;
-    std::vector<cv::Point> goodReferencePoints;
-
-    double maxGoodMatchDist = 1.75 * minDist;
-    for(DMatch match : matches) {
-        if(match.distance < maxGoodMatchDist) {
-            goodReferencePoints.push_back(referenceKeypoints[match.trainIdx].pt);
-            goodTargetPoints.push_back(targetKeypoints[match.queryIdx].pt);
-        }
-    }
-
-    if(goodTargetPoints.size() < 4 ||
-            goodReferencePoints.size() < 4) {
-        // There are too few good points to find the homography.
-        return;
-    }
-
-    //Mat homography;
-    Mat homography = findHomography(goodReferencePoints, goodTargetPoints, RANSAC, 5);
-
-    if(!homography.empty()) {
-   //     perspectiveTransform(referenceCorners, targetCorners, homography);
-    //    targetCorners[0] += P1;
-  //      targetCorners[1] += P1;
-   //     targetCorners[2] += P1;
-  //      targetCorners[3] += P1;
-
-        detected_rects.push_back(Rect(P1.x, P1.y, P2.x - P1.x, P4.y - P1.y));
-        */
-/*
-        line(retMat, P1, P2 , Scalar(0, 255, 0), 4);
-        line(retMat, P2, P3, Scalar(0, 255, 0), 4);
-        line(retMat, P3, P4, Scalar(0, 255, 0), 4);
-        line(retMat, P4, P1, Scalar(0, 255, 0), 4);
-*/
 }
 
 extern "C" void JNICALL
