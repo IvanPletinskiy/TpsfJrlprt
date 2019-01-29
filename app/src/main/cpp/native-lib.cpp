@@ -44,27 +44,27 @@ long RADIUS;
 vector<Filter> filters;
 string signs_string;
 bool orb(Mat mat, int corners);
-
+int detected_sign_id = 0;
 void draw_detected_shapes();
 
-extern "C" void JNICALL
+extern "C" jint JNICALL
 Java_com_handen_roadhelper_MainActivity_nativeOnFrame(JNIEnv *env, jobject instance,
-                                                      jlong matAddr,
-                                                      jlong sign_code_addr) {
+                                                      jlong matAddr) {
     // int64 e1 = cv::getTickCount();
     retMat = *(Mat *) matAddr;
+    detected_sign_id = 0;
     blur(retMat, retMat, Size(5, 5));
     //cvtColor(retMat, retMat, CV_RGB2GRAY);
    // threshold(retMat, retMat, 192, 255, CV_THRESH_BINARY);
     find_shapes(retMat);
-    sign_code = * (Mat *) sign_code_addr;
-    signs_string = "";
+   // sign_code = * (Mat *) sign_code_addr;
     // char cbuff[20];
     // int64 e2 = cv::getTickCount();
     //  float time = (e2 - e1) / cv::getTickFrequency();
     //   sprintf(cbuff, "%f sec", time);
     // putText(retMat, cbuff, CvPoint(30, 30), FONT_HERSHEY_COMPLEX, 1.0, cvScalar(255, 255, 255));
     draw_detected_shapes();
+    return detected_sign_id;
 }
 
 void draw_detected_shapes() {
@@ -371,11 +371,7 @@ bool orb(Mat mat, int corners) {
         Mat homography = findHomography(goodReferencePoints, goodTargetPoints, RANSAC, 5);
 
         if (!homography.empty()) {
-        //    signs_string += to_string(filter.code);
-         //   signs_string += ';';
-          //  sign_code = filter.code;
-            sign_code.at<long>(0, 0) = filter.code;
-            //sign_code = filter.code;
+            detected_sign_id = filter.code;
             if (corners == 4)
                 detected_rects.push_back(Rect(P1.x, P1.y, P2.x - P1.x, P4.y - P1.y));
             else if (corners == 3)

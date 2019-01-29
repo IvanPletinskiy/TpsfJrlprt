@@ -2,7 +2,9 @@ package com.handen.roadhelper;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.speech.tts.TextToSpeech;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -19,15 +21,22 @@ import org.opencv.core.Mat;
 import org.opencv.imgcodecs.Imgcodecs;
 
 import java.io.IOException;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
+public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2, TextToSpeech.OnInitListener {
 
     private static final String TAG = "OCVSample::Activity";
     private CameraBridgeViewBase _cameraBridgeViewBase;
     static boolean isFilterAdded = false;
     private String signsString = "";
+    private HashMap<Integer, Long> lastSignEntry = new HashMap<>();
     int signCode = -1;
-   // Mat code = new Mat(1, 1, 0);
+    int frameResult = 0;
+    private TextToSpeech textToSpeech;
+
+    // Mat code = new Mat(1, 1, 0);
 
     private BaseLoaderCallback _baseLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -55,12 +64,11 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_main);
-
+        textToSpeech = new TextToSpeech(MainActivity.this, MainActivity.this);
         // Permissions for Android 6+
         ActivityCompat.requestPermissions(MainActivity.this,
                 new String[]{Manifest.permission.CAMERA},
                 1);
-
         _cameraBridgeViewBase = (CameraBridgeViewBase) findViewById(R.id.main_surface);
         _cameraBridgeViewBase.setVisibility(SurfaceView.VISIBLE);
         _cameraBridgeViewBase.setCvCameraViewListener(this);
@@ -119,7 +127,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             );
 
             addFilter(pedastrian.getNativeObjAddr(), 5612, 4);
-
+            lastSignEntry.put(5612, -1L);
             Mat sign27 = new Mat();
 
             sign27 = Utils.loadResource(getApplicationContext(),
@@ -128,7 +136,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             );
 
             addFilter(sign27.getNativeObjAddr(), 27, 4);
-
+            lastSignEntry.put(27, -1L);
             Mat sign530 = null;
 
             sign530 = Utils.loadResource(getApplicationContext(),
@@ -137,7 +145,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             );
 
             addFilter(sign530.getNativeObjAddr(), 530, 4);
-
+            lastSignEntry.put(530, -1L);
             Mat sign121 = null;
 
             sign121 = Utils.loadResource(getApplicationContext(),
@@ -146,6 +154,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             );
 
             addFilter(sign121.getNativeObjAddr(), 121, 3);
+            lastSignEntry.put(121, -1L);
             Mat sign324_60 = null;
 
             sign324_60 = Utils.loadResource(getApplicationContext(),
@@ -154,6 +163,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             );
 
             addFilter(sign324_60.getNativeObjAddr(), 32460, 0);
+            lastSignEntry.put(32460, -1L);
         }
         catch(IOException e) {
             e.printStackTrace();
@@ -181,25 +191,69 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-        signsString = "";
+        // signsString = "";
         //     Mat matGray = inputFrame.gray();
         Mat matRgba = inputFrame.rgba();
-        nativeOnFrame(matRgba.getNativeObjAddr(), code.getNativeObjAddr());
+        frameResult = nativeOnFrame(matRgba.getNativeObjAddr());
+        if(frameResult > 0) {
+            long currentMillis = new Date().getTime();
+            if(currentMillis - lastSignEntry.get(frameResult) > 5000) {
+                //VOICE
+            }
+            lastSignEntry.put(frameResult, currentMillis);
+        }
+        //  if(frameResult > 0)
+        //   Toast.makeText(MainActivity.this, "УРААААА", Toast.LENGTH_LONG).show();
         //   Mat copyMat = new Mat();
         //   matRgba.copyTo(copyMat);
         //   matRgba = null;
-        if(code.get(0, 0)[0] > 0 ) {
-            Toast.makeText(MainActivity.this, "УРААААА", Toast.LENGTH_LONG).show();
-        }
-        if(signCode > 0)
-            Toast.makeText(MainActivity.this, "УРААААА", Toast.LENGTH_LONG).show();
-      //  if(signsString.length() > 0)
-      //      Toast.makeText(MainActivity.this, "УРААААА", Toast.LENGTH_LONG).show();
+        //  if(code.get(0, 0)[0] > 0 ) {
+        //      Toast.makeText(MainActivity.this, "УРААААА", Toast.LENGTH_LONG).show();
+        //  }
+
+        //    if(signCode > 0)
+        //       Toast.makeText(MainActivity.this, "УРААААА", Toast.LENGTH_LONG).show();
+        //  if(signsString.length() > 0)
+        //      Toast.makeText(MainActivity.this, "УРААААА", Toast.LENGTH_LONG).show();
 
         return matRgba;
     }
 
-    public native void nativeOnFrame(long matAddrGray, long matAddrCode);
+    public native int nativeOnFrame(long matAddrGray);
 
     public native void addFilter(long matAddr, int code, int corners);
+
+    @Override
+    public void onInit(int status) {
+        if(status == TextToSpeech.SUCCESS) {
+
+            Locale locale = new Locale("ru");
+
+            int result = textToSpeech.setLanguage(locale);
+            //int result = mTTS.setLanguage(Locale.getDefault());
+
+            if(result == TextToSpeech.LANG_MISSING_DATA
+                    || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                Log.e("TTS", "Извините, этот язык не поддерживается");
+            }
+            else {
+                //     mButton.setEnabled(true);
+                String s = "Я готов, хозяин";
+                speak(s);
+            }
+
+        }
+        else {
+            Log.e("TTS", "Ошибка!");
+        }
+    }
+
+    private void speak(String s) {
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            textToSpeech.speak(s, TextToSpeech.QUEUE_FLUSH, null, null);
+        }
+        else {
+            textToSpeech.speak(s, TextToSpeech.QUEUE_FLUSH, null);
+        }
+    }
 }
