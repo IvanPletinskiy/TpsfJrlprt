@@ -1,6 +1,7 @@
 package com.handen.roadhelper;
 
 import android.Manifest;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -31,12 +32,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private CameraBridgeViewBase _cameraBridgeViewBase;
     static boolean isFilterAdded = false;
     private String signsString = "";
-    private HashMap<Integer, Long> lastSignEntry = new HashMap<>();
+    private static HashMap<Integer, Long> lastSignEntry;
+    private static final String IS_INITIALIZED = "IS_INITIALIZED";
+    //private HashMap<Integer, String> voiceMessagesMap
     int signCode = -1;
     int frameResult = 0;
     private TextToSpeech textToSpeech;
-
-    // Mat code = new Mat(1, 1, 0);
+    private static boolean isTextToSpeachLoaded = false;
 
     private BaseLoaderCallback _baseLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -63,8 +65,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         super.onCreate(savedInstanceState);
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+
         setContentView(R.layout.activity_main);
-        textToSpeech = new TextToSpeech(MainActivity.this, MainActivity.this);
+        //if(!savedInstanceState.isEmpty() && !savedInstanceState.getBoolean(IS_INITIALIZED))
+        if(!isTextToSpeachLoaded)
+            textToSpeech = new TextToSpeech(getApplicationContext(), MainActivity.this);
         // Permissions for Android 6+
         ActivityCompat.requestPermissions(MainActivity.this,
                 new String[]{Manifest.permission.CAMERA},
@@ -119,6 +125,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         if(isFilterAdded) {
             return;
         }
+        lastSignEntry = new HashMap<>();
         Mat pedastrian = null;
         try {
             pedastrian = Utils.loadResource(getApplicationContext(),
@@ -127,7 +134,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             );
 
             addFilter(pedastrian.getNativeObjAddr(), 5612, 4);
-            lastSignEntry.put(5612, -1L);
+            lastSignEntry.put(5612, 0L);
             Mat sign27 = new Mat();
 
             sign27 = Utils.loadResource(getApplicationContext(),
@@ -136,7 +143,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             );
 
             addFilter(sign27.getNativeObjAddr(), 27, 4);
-            lastSignEntry.put(27, -1L);
+            lastSignEntry.put(27, 0L);
             Mat sign530 = null;
 
             sign530 = Utils.loadResource(getApplicationContext(),
@@ -145,7 +152,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             );
 
             addFilter(sign530.getNativeObjAddr(), 530, 4);
-            lastSignEntry.put(530, -1L);
+            lastSignEntry.put(530, 0L);
             Mat sign121 = null;
 
             sign121 = Utils.loadResource(getApplicationContext(),
@@ -154,7 +161,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             );
 
             addFilter(sign121.getNativeObjAddr(), 121, 3);
-            lastSignEntry.put(121, -1L);
+            lastSignEntry.put(121, 0L);
             Mat sign324_60 = null;
 
             sign324_60 = Utils.loadResource(getApplicationContext(),
@@ -163,7 +170,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             );
 
             addFilter(sign324_60.getNativeObjAddr(), 32460, 0);
-            lastSignEntry.put(32460, -1L);
+            lastSignEntry.put(32460, 0L);
         }
         catch(IOException e) {
             e.printStackTrace();
@@ -199,22 +206,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             long currentMillis = new Date().getTime();
             if(currentMillis - lastSignEntry.get(frameResult) > 5000) {
                 //VOICE
+                if(frameResult == 5612) {
+                    speak("Пешеходный переход");
+                }
             }
             lastSignEntry.put(frameResult, currentMillis);
         }
-        //  if(frameResult > 0)
-        //   Toast.makeText(MainActivity.this, "УРААААА", Toast.LENGTH_LONG).show();
-        //   Mat copyMat = new Mat();
-        //   matRgba.copyTo(copyMat);
-        //   matRgba = null;
-        //  if(code.get(0, 0)[0] > 0 ) {
-        //      Toast.makeText(MainActivity.this, "УРААААА", Toast.LENGTH_LONG).show();
-        //  }
-
-        //    if(signCode > 0)
-        //       Toast.makeText(MainActivity.this, "УРААААА", Toast.LENGTH_LONG).show();
-        //  if(signsString.length() > 0)
-        //      Toast.makeText(MainActivity.this, "УРААААА", Toast.LENGTH_LONG).show();
 
         return matRgba;
     }
@@ -226,7 +223,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     @Override
     public void onInit(int status) {
         if(status == TextToSpeech.SUCCESS) {
-
+            isTextToSpeachLoaded = true;
             Locale locale = new Locale("ru");
 
             int result = textToSpeech.setLanguage(locale);
@@ -238,6 +235,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             }
             else {
                 //     mButton.setEnabled(true);
+                Toast.makeText(MainActivity.this, "Синтезатор речи загружен",  Toast.LENGTH_SHORT).show();
                 String s = "Я готов, хозяин";
                 speak(s);
             }
@@ -249,6 +247,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     private void speak(String s) {
+        //if(!isTextToSpeachLoaded)
+
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             textToSpeech.speak(s, TextToSpeech.QUEUE_FLUSH, null, null);
         }
