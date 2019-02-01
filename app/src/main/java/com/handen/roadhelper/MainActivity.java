@@ -52,6 +52,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     initializeImages();
                     _cameraBridgeViewBase.enableView();
                 }
+
+                ///123
                 break;
                 default: {
                     super.onManagerConnected(status);
