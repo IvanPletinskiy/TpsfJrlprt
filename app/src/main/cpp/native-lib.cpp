@@ -28,7 +28,7 @@ vector<Triangle> detected_triangles;
 vector<Circle> detected_circles;
 Point P1, P2, P3, P4;
 CvPoint CENTER;
-long RADIUS;
+int RADIUS;
 vector<Filter> filters;
 Ptr<ORB> orbDetector = ORB::create();
 BFMatcher matcher(NORM_HAMMING);
@@ -43,7 +43,7 @@ Java_com_handen_roadhelper_MainActivity_nativeOnFrame(JNIEnv *env, jobject insta
                                                       jlong matAddr) {
     retMat = *(Mat *) matAddr;
     detected_sign_id = 0;
-    blur(retMat, retMat, Size(5, 5));
+   // blur(retMat, retMat, Size(5, 5));
     find_shapes(retMat);
     draw_detected_shapes();
     return detected_sign_id;
@@ -85,7 +85,7 @@ void draw_detected_shapes() {
     }
     if (detected_circles.size() != 0) {
         Circle minCircle;
-        int minRadius = -1;
+        int minRadius = 100000;
         for (Circle c : detected_circles) {
             if (c.radius == -1 || c.radius < minRadius) {
                 minRadius = c.radius;
@@ -109,7 +109,7 @@ void find_shapes(Mat mat) {
     IplImage *imgGrayScale = cvCreateImage(cvGetSize(img), 8, 1);
     cvCvtColor(img, imgGrayScale, CV_RGBA2GRAY);
 
-    cvThreshold(imgGrayScale, imgGrayScale, 128, 255, CV_THRESH_BINARY);
+    cvThreshold(imgGrayScale, imgGrayScale, 100, 255, CV_THRESH_BINARY);
 
     CvSeq *contours = NULL;  //hold the pointer to a contour in the memory block
     CvSeq *result = NULL;   //hold sequence of points of a contour
@@ -121,12 +121,14 @@ void find_shapes(Mat mat) {
     while (contours) {
         result = cvApproxPoly(contours, sizeof(CvContour), storage, CV_POLY_APPROX_DP,
                               cvContourPerimeter(contours) * 0.05, 0);
-        if (cvContourArea(result) < 100) {
+
+        if (cvContourArea(result) < 150) {
             contours = contours->h_next;
             continue;
         }
+
         //if circle
-        /*
+
         if(cvCheckContourConvexity(result)) {
             CvPoint *pt[result->total];
             for(int i = 0; i < result->total; ++i) {
@@ -135,15 +137,15 @@ void find_shapes(Mat mat) {
             CvRect rect  = cvBoundingRect(result);
             CvPoint2D32f p0;
             CvPoint2D32f *p = &p0;
-            float f = 0;
-            float *r = &f;
-            cvMinEnclosingCircle(result, p, r);
-            if(p == nullptr || r == nullptr) {
+            float r;
+            cvMinEnclosingCircle(result, p, &r);
+            if(p == nullptr || &r == nullptr) {
                 contours = contours->h_next;
             }
 
             CENTER = CvPoint(p->x, p->y);
-            RADIUS = (long) &r;
+           // float f = &r;
+            RADIUS = (int) r;
    //         Rect rect1(rect.x, rect.y, rect.width, rect.height);
     //        rectangle(retMat, rect1, Scalar(255, 0, 0), 4);
             cvSetImageROI(img, cvRect(rect.x, rect.y, rect.width, rect.height));
@@ -151,7 +153,7 @@ void find_shapes(Mat mat) {
             cv::Mat mat123 = cv::cvarrToMat(img);
             orb(mat123, 0);
         }
-         */
+
         //if there are 3  vertices  in the contour(It should be a triangle)
         if (result->total == 3) {
             //iterating through each point
@@ -219,7 +221,7 @@ void find_shapes(Mat mat) {
                 cvSetImageROI(img, cvRect(min_x, min_y, max_x - min_x, max_y - min_y));
                 retMat.adjustROI(min_x, min_y, max_x - min_x, max_y - min_y);
                 cv::Mat mat123 = cv::cvarrToMat(img);
-                //Rect rect = Rect(min_x, min_y, max_x - min_x, max_y - min_y);
+                Rect rect = Rect(min_x, min_y, max_x - min_x, max_y - min_y);
                 orb(mat123, 4);
             }
 
@@ -309,7 +311,6 @@ bool orb(Mat mat, int corners) {
 extern "C" void JNICALL
 Java_com_handen_roadhelper_MainActivity_addFilter(JNIEnv *env, jobject instance, jlong matAddr,
                                                   jint code, jint corners) {
-    Ptr<ORB> orbDetector = ORB::create();
     Mat mat = *(Mat *) matAddr;
     if (mat.empty())
         return;
@@ -318,7 +319,7 @@ Java_com_handen_roadhelper_MainActivity_addFilter(JNIEnv *env, jobject instance,
     else
         if (mat.channels() == 4)
             cv::cvtColor(mat, mat, CV_BGRA2GRAY);
-    threshold(mat, mat, 128, 255, CV_THRESH_BINARY);
+    threshold(mat, mat, 100, 255, CV_THRESH_BINARY);
     std::vector<cv::KeyPoint> referenceKeypoints;
     cv::Mat referenceDescriptors;
     orbDetector -> detectAndCompute(mat, noArray(), referenceKeypoints, referenceDescriptors);

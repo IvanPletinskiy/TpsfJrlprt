@@ -244,15 +244,16 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     }
                     case 32460: {
                         speak("Максимальная скорость 60");
+                        break;
                     }
                     case 5191: {
                         speak("Тупик");
+                        break;
                     }
                 }
             }
             lastSignEntry.put(frameResult, currentMillis);
         }
-
         return matRgba;
     }
 
