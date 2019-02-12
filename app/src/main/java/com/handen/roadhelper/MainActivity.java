@@ -26,31 +26,25 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2, TextToSpeech.OnInitListener {
+public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
     private static final String TAG = "OCVSample::Activity";
-    private CameraBridgeViewBase _cameraBridgeViewBase;
+    private CameraBridgeViewBase cameraBridgeViewBase;
     static boolean isFilterAdded = false;
-    private String signsString = "";
     private static HashMap<Integer, Long> lastSignEntry;
-    private static final String IS_INITIALIZED = "IS_INITIALIZED";
-    //private HashMap<Integer, String> voiceMessagesMap
-    int signCode = -1;
     int frameResult = 0;
-    private TextToSpeech textToSpeech;
+    private static TextToSpeech textToSpeech;
     private static boolean isTextToSpeachLoaded = false;
 
-    private BaseLoaderCallback _baseLoaderCallback = new BaseLoaderCallback(this) {
+    private BaseLoaderCallback baseLoaderCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
             switch(status) {
                 case LoaderCallbackInterface.SUCCESS: {
                     Log.i(TAG, "OpenCV loaded successfully");
-                    // Load ndk built module, as specified in moduleName in build.gradle
-                    // after opencv initialization
                     System.loadLibrary("native-lib");
                     initializeImages();
-                    _cameraBridgeViewBase.enableView();
+                    cameraBridgeViewBase.enableView();
                 }
 
                 ///123
@@ -67,19 +61,16 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         super.onCreate(savedInstanceState);
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
         setContentView(R.layout.activity_main);
-        //if(!savedInstanceState.isEmpty() && !savedInstanceState.getBoolean(IS_INITIALIZED))
-        if(!isTextToSpeachLoaded)
-            textToSpeech = new TextToSpeech(getApplicationContext(), MainActivity.this);
-        // Permissions for Android 6+
         ActivityCompat.requestPermissions(MainActivity.this,
                 new String[]{Manifest.permission.CAMERA},
                 1);
-        _cameraBridgeViewBase = (CameraBridgeViewBase) findViewById(R.id.main_surface);
-        _cameraBridgeViewBase.setVisibility(SurfaceView.VISIBLE);
-        _cameraBridgeViewBase.setCvCameraViewListener(this);
+        cameraBridgeViewBase = findViewById(R.id.main_surface);
+        cameraBridgeViewBase.setVisibility(SurfaceView.VISIBLE);
+        cameraBridgeViewBase.setCvCameraViewListener(this);
     }
 
     @Override
@@ -92,12 +83,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public void onResume() {
         super.onResume();
         if(!OpenCVLoader.initDebug()) {
-            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, _baseLoaderCallback);
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, baseLoaderCallback);
         }
         else {
-            Log.d(TAG, "OpenCV library found inside package. Using it!");
-            _baseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+            baseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
     }
 
@@ -105,21 +94,14 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         switch(requestCode) {
             case 1: {
-                // If request is cancelled, the result arrays are empty.
                 if(grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // permission was granted, yay! Do the
-                    // contacts-related task you need to do.
                 }
                 else {
-                    // permission denied, boo! Disable the
-                    // functionality that depends on this permission.
-                    Toast.makeText(MainActivity.this, "Permission denied to read your External storage", Toast.LENGTH_SHORT).show();
+                    showToast("Permission denied to read your External storage");
                 }
                 return;
             }
-            // other 'case' lines to check for other
-            // permissions this app might request
         }
     }
 
@@ -128,8 +110,35 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             return;
         }
         lastSignEntry = new HashMap<>();
-        Mat pedastrian = null;
+        if(!isTextToSpeachLoaded) {
+            textToSpeech = new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
+                @Override
+                public void onInit(int status) {
+                    if(status == TextToSpeech.SUCCESS) {
+                        isTextToSpeachLoaded = true;
+
+                        Locale locale = new Locale("ru");
+                        int result = textToSpeech.setLanguage(locale);
+
+                        if(result == TextToSpeech.LANG_MISSING_DATA
+                                || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                            showToast("Русский язык не поддерживается");
+                        }
+                        else {
+                            showToast("Синтезатор речи загружен");
+                            String s = "Я готов, хозяин";
+                            //               speak(s);
+                        }
+                    }
+                    else {
+                        showToast("Ошибка");
+                    }
+                }
+            });
+        }
+
         try {
+            Mat pedastrian = null;
             pedastrian = Utils.loadResource(getApplicationContext(),
                     R.drawable.sign5162,
                     Imgcodecs.CV_LOAD_IMAGE_COLOR
@@ -173,6 +182,16 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
             addFilter(sign324_60.getNativeObjAddr(), 32460, 0);
             lastSignEntry.put(32460, 0L);
+
+            Mat sign5191 = null;
+            sign5191 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.sign5191,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR
+            );
+            addFilter(sign5191.getNativeObjAddr(), 5191, 4);
+            lastSignEntry.put(5191, 0L);
+
+
         }
         catch(IOException e) {
             e.printStackTrace();
@@ -186,8 +205,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     public void disableCamera() {
-        if(_cameraBridgeViewBase != null) {
-            _cameraBridgeViewBase.disableView();
+        if(cameraBridgeViewBase != null) {
+            cameraBridgeViewBase.disableView();
         }
     }
 
@@ -208,13 +227,35 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             long currentMillis = new Date().getTime();
             if(currentMillis - lastSignEntry.get(frameResult) > 5000) {
                 //VOICE
-                if(frameResult == 5612) {
-                    speak("Пешеходный переход");
+                switch(frameResult) {
+                    case 5612: {
+                        speak("Пешеходный переход");
+                        break;
+                    }
+                    case 121: {
+                        speak("Осторожно, дети");
+                        break;
+                    }
+                    case 530: {
+                        speak("Минимальная скорость 50");
+                        break;
+                    }
+                    case 27: {
+                        speak("Преемущество перед встречным движением");
+                        break;
+                    }
+                    case 32460: {
+                        speak("Максимальная скорость 60");
+                        break;
+                    }
+                    case 5191: {
+                        speak("Тупик");
+                        break;
+                    }
                 }
             }
             lastSignEntry.put(frameResult, currentMillis);
         }
-
         return matRgba;
     }
 
@@ -222,35 +263,11 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     public native void addFilter(long matAddr, int code, int corners);
 
-    @Override
-    public void onInit(int status) {
-        if(status == TextToSpeech.SUCCESS) {
-            isTextToSpeachLoaded = true;
-            Locale locale = new Locale("ru");
-
-            int result = textToSpeech.setLanguage(locale);
-            //int result = mTTS.setLanguage(Locale.getDefault());
-
-            if(result == TextToSpeech.LANG_MISSING_DATA
-                    || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                Log.e("TTS", "Извините, этот язык не поддерживается");
-            }
-            else {
-                //     mButton.setEnabled(true);
-                Toast.makeText(MainActivity.this, "Синтезатор речи загружен",  Toast.LENGTH_SHORT).show();
-                String s = "Я готов, хозяин";
-                speak(s);
-            }
-
-        }
-        else {
-            Log.e("TTS", "Ошибка!");
-        }
+    private void showToast(String s) {
+        Toast.makeText(MainActivity.this, s, Toast.LENGTH_SHORT).show();
     }
 
     private void speak(String s) {
-        //if(!isTextToSpeachLoaded)
-
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             textToSpeech.speak(s, TextToSpeech.QUEUE_FLUSH, null, null);
         }
