@@ -46,6 +46,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     initializeImages();
                     cameraBridgeViewBase.enableView();
                 }
+
+                ///123
                 break;
                 default: {
                     super.onManagerConnected(status);
@@ -139,8 +141,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             Mat pedastrian = null;
             pedastrian = Utils.loadResource(getApplicationContext(),
                     R.drawable.sign5162,
-                    Imgcodecs.CV_LOAD_IMAGE_COLOR
-            );
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR);
 
             addFilter(pedastrian.getNativeObjAddr(), 5612, 4);
             lastSignEntry.put(5612, 0L);
@@ -148,8 +149,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
             sign27 = Utils.loadResource(getApplicationContext(),
                     R.drawable.sign27,
-                    Imgcodecs.CV_LOAD_IMAGE_COLOR
-            );
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR);
 
             addFilter(sign27.getNativeObjAddr(), 27, 4);
             lastSignEntry.put(27, 0L);
@@ -157,8 +157,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
             sign530 = Utils.loadResource(getApplicationContext(),
                     R.drawable.sign530,
-                    Imgcodecs.CV_LOAD_IMAGE_COLOR
-            );
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR);
 
             addFilter(sign530.getNativeObjAddr(), 530, 4);
             lastSignEntry.put(530, 0L);
@@ -166,8 +165,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
             sign121 = Utils.loadResource(getApplicationContext(),
                     R.drawable.sign121,
-                    Imgcodecs.CV_LOAD_IMAGE_COLOR
-            );
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR);
 
             addFilter(sign121.getNativeObjAddr(), 121, 3);
             lastSignEntry.put(121, 0L);
@@ -175,8 +173,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
             sign324_60 = Utils.loadResource(getApplicationContext(),
                     R.drawable.sign324_60,
-                    Imgcodecs.CV_LOAD_IMAGE_COLOR
-            );
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR);
 
             addFilter(sign324_60.getNativeObjAddr(), 32460, 0);
             lastSignEntry.put(32460, 0L);
@@ -184,12 +181,86 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             Mat sign5191 = null;
             sign5191 = Utils.loadResource(getApplicationContext(),
                     R.drawable.sign5191,
-                    Imgcodecs.CV_LOAD_IMAGE_COLOR
-            );
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR);
             addFilter(sign5191.getNativeObjAddr(), 5191, 4);
             lastSignEntry.put(5191, 0L);
 
+            Mat sign12 = null;
+            sign12 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.sign12,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR);
+            addFilter(sign12.getNativeObjAddr(), 12, 3);
+            lastSignEntry.put(12, 0L);
 
+            Mat sign17 = null;
+            sign17 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.sign17,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR);
+            addFilter(sign17.getNativeObjAddr(), 17, 3);
+            lastSignEntry.put(17, 0L);
+
+            Mat sign18 = null;
+            sign18 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.sign18,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR);
+            addFilter(sign18.getNativeObjAddr(), 18, 3);
+            lastSignEntry.put(18, 0L);
+
+            Mat sign122 = null;
+            sign122 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.sign122,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR);
+            addFilter(sign122.getNativeObjAddr(), 122, 3);
+            lastSignEntry.put(122, 0L);
+
+            Mat sign515 = null;
+            sign515 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.sign515,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR);
+            addFilter(sign515.getNativeObjAddr(), 515, 4);
+            lastSignEntry.put(515, 0L);
+
+            Mat sign1161 = null;
+            sign1161 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.sign1161,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR);
+            addFilter(sign1161.getNativeObjAddr(), 1161, 3);
+            lastSignEntry.put(1161, 0L);
+
+            Mat sign5172 = null;
+            sign5172 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.sign5172,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR);
+            addFilter(sign5172.getNativeObjAddr(), 5172, 4);
+            lastSignEntry.put(5172, 0L);
+
+            Mat sign123 = null;
+            sign123 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.sign123,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR);
+            addFilter(sign123.getNativeObjAddr(), 123, 3);
+            lastSignEntry.put(123, 0L);
+
+            Mat sign21 = null;
+            sign21 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.sign21,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR);
+            addFilter(sign21.getNativeObjAddr(), 21, 4);
+            lastSignEntry.put(21, 0L);
+
+            Mat sign24 = null;
+            sign24 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.sign24,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR);
+            addFilter(sign24.getNativeObjAddr(), 24, 3);
+            lastSignEntry.put(24, 0L);
+
+            Mat sign5201 = null;
+            sign5201 = Utils.loadResource(getApplicationContext(),
+                    R.drawable.sign5201,
+                    Imgcodecs.CV_LOAD_IMAGE_COLOR);
+            addFilter(sign5201.getNativeObjAddr(), 5201, 4);
+            lastSignEntry.put(5201, 0L);
         }
         catch(IOException e) {
             e.printStackTrace();
@@ -217,14 +288,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-        // signsString = "";
-        //     Mat matGray = inputFrame.gray();
         Mat matRgba = inputFrame.rgba();
+        //id распознанного знака
         frameResult = nativeOnFrame(matRgba.getNativeObjAddr());
-        if(frameResult > 0) {
+        if(frameResult > 0) { //Если знак найден
             long currentMillis = new Date().getTime();
             if(currentMillis - lastSignEntry.get(frameResult) > 5000) {
-                //VOICE
                 switch(frameResult) {
                     case 5612: {
                         speak("Пешеходный переход");
@@ -248,6 +317,50 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     }
                     case 5191: {
                         speak("Тупик");
+                        break;
+                    }
+                    case 12: {
+                        speak("Железнодорожный переезд");
+                        break;
+                    }
+                    case 17: {
+                        speak("Круговое движение");
+                        break;
+                    }
+                    case 18: {
+                        speak("Светосфор");
+                        break;
+                    }
+                    case 122: {
+                        speak("Пешеходный переход");
+                        break;
+                    }
+                    case 123: {
+                        speak("Дорожные работы");
+                        break;
+                    }
+                    case 515: {
+                        speak("Парковка");
+                        break;
+                    }
+                    case 1161: {
+                        speak("Дорожная неровность");
+                        break;
+                    }
+                    case 5172: {
+                        speak("Подземный переход");
+                        break;
+                    }
+                    case 21: {
+                        speak("Главная дорога");
+                        break;
+                    }
+                    case 24: {
+                        speak("Уступите дорогу");
+                        break;
+                    }
+                    case 5201:{
+                        speak("Новая дорога");
                         break;
                     }
                 }

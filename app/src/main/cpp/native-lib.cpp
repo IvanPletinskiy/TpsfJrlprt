@@ -32,6 +32,7 @@ int RADIUS;
 vector<Filter> filters;
 Ptr<ORB> orbDetector = ORB::create();
 BFMatcher matcher(NORM_HAMMING);
+
 bool orb(Mat mat, int corners);
 
 int detected_sign_id = 0;
@@ -43,7 +44,7 @@ Java_com_handen_roadhelper_MainActivity_nativeOnFrame(JNIEnv *env, jobject insta
                                                       jlong matAddr) {
     retMat = *(Mat *) matAddr;
     detected_sign_id = 0;
-   // blur(retMat, retMat, Size(5, 5));
+    blur(retMat, retMat, Size(5, 5));
     find_shapes(retMat);
     draw_detected_shapes();
     return detected_sign_id;
@@ -129,25 +130,25 @@ void find_shapes(Mat mat) {
 
         //if circle
 
-        if(cvCheckContourConvexity(result)) {
+        if (cvCheckContourConvexity(result)) {
             CvPoint *pt[result->total];
-            for(int i = 0; i < result->total; ++i) {
+            for (int i = 0; i < result->total; ++i) {
                 pt[i] = (CvPoint *) cvGetSeqElem(result, i);
             }
-            CvRect rect  = cvBoundingRect(result);
+            CvRect rect = cvBoundingRect(result);
             CvPoint2D32f p0;
             CvPoint2D32f *p = &p0;
             float r;
             cvMinEnclosingCircle(result, p, &r);
-            if(p == nullptr || &r == nullptr) {
+            if (p == nullptr || &r == nullptr) {
                 contours = contours->h_next;
             }
 
             CENTER = CvPoint(p->x, p->y);
-           // float f = &r;
+            // float f = &r;
             RADIUS = (int) r;
-   //         Rect rect1(rect.x, rect.y, rect.width, rect.height);
-    //        rectangle(retMat, rect1, Scalar(255, 0, 0), 4);
+            //         Rect rect1(rect.x, rect.y, rect.width, rect.height);
+            //        rectangle(retMat, rect1, Scalar(255, 0, 0), 4);
             cvSetImageROI(img, cvRect(rect.x, rect.y, rect.width, rect.height));
             retMat.adjustROI(rect.x, rect.y, rect.width, rect.height);
             cv::Mat mat123 = cv::cvarrToMat(img);
@@ -235,13 +236,14 @@ void find_shapes(Mat mat) {
 
 bool orb(Mat mat, int corners) {
     resize(mat, mat, Size(200, 200));
+    std::vector<Point2f> targetCorners(4);
+    std::vector<cv::KeyPoint> targetKeypoints;
+    cv::Mat targetDescriptors;
+    orbDetector->detectAndCompute(mat, noArray(), targetKeypoints, targetDescriptors);
+
     for (Filter filter : filters) {
         if (filter.corners != corners)
             continue;
-        std::vector<Point2f> targetCorners(4);
-        std::vector<cv::KeyPoint> targetKeypoints;
-        cv::Mat targetDescriptors;
-        orbDetector->detectAndCompute(mat, noArray(), targetKeypoints, targetDescriptors);
 
         std::vector<DMatch> matches;
         matcher.match(targetDescriptors, filter.descriptors,
@@ -315,6 +317,7 @@ Java_com_handen_roadhelper_MainActivity_addFilter(JNIEnv *env, jobject instance,
     if (mat.empty())
         return;
     resize(mat, mat, Size(200, 200));
+    blur(mat, mat, Size(5, 5));
     if (mat.channels() == 3)cv::cvtColor(mat, mat, CV_BGR2GRAY);
     else
         if (mat.channels() == 4)
@@ -322,6 +325,6 @@ Java_com_handen_roadhelper_MainActivity_addFilter(JNIEnv *env, jobject instance,
     threshold(mat, mat, 100, 255, CV_THRESH_BINARY);
     std::vector<cv::KeyPoint> referenceKeypoints;
     cv::Mat referenceDescriptors;
-    orbDetector -> detectAndCompute(mat, noArray(), referenceKeypoints, referenceDescriptors);
+    orbDetector->detectAndCompute(mat, noArray(), referenceKeypoints, referenceDescriptors);
     filters.push_back(Filter(code, corners, referenceKeypoints, referenceDescriptors));
 }
