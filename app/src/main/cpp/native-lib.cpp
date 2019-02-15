@@ -109,9 +109,8 @@ void find_shapes(Mat mat) {
 
     IplImage *imgGrayScale = cvCreateImage(cvGetSize(img), 8, 1);
     cvCvtColor(img, imgGrayScale, CV_RGBA2GRAY);
-
+    detect_circles(mat);
     cvThreshold(imgGrayScale, imgGrayScale, 100, 255, CV_THRESH_BINARY);
-
     CvSeq *contours = NULL;  //hold the pointer to a contour in the memory block
     CvSeq *result = NULL;   //hold sequence of points of a contour
     CvMemStorage *storage = cvCreateMemStorage(0); //storage area for all contours
@@ -129,7 +128,7 @@ void find_shapes(Mat mat) {
         }
 
         //if circle
-
+/*
         if (cvCheckContourConvexity(result)) {
             CvPoint *pt[result->total];
             for (int i = 0; i < result->total; ++i) {
@@ -154,7 +153,7 @@ void find_shapes(Mat mat) {
             cv::Mat mat123 = cv::cvarrToMat(img);
             orb(mat123, 0);
         }
-
+*/
         //if there are 3  vertices  in the contour(It should be a triangle)
         if (result->total == 3) {
             //iterating through each point
@@ -222,7 +221,7 @@ void find_shapes(Mat mat) {
                 cvSetImageROI(img, cvRect(min_x, min_y, max_x - min_x, max_y - min_y));
                 retMat.adjustROI(min_x, min_y, max_x - min_x, max_y - min_y);
                 cv::Mat mat123 = cv::cvarrToMat(img);
-                Rect rect = Rect(min_x, min_y, max_x - min_x, max_y - min_y);
+           //     Rect rect = Rect(min_x, min_y, max_x - min_x, max_y - min_y);
                 orb(mat123, 4);
             }
 
@@ -232,6 +231,27 @@ void find_shapes(Mat mat) {
         cvReleaseMemStorage(&storage);
     if (imgGrayScale)
         cvReleaseImage(&imgGrayScale);
+}
+
+void detect_circles(Mat mat) {
+    vector<Vec3f> circles;
+        HoughCircles(mat, circles, HOUGH_GRADIENT, 1,
+                     mat.rows/16,  // change this value to detect circles with different distances to each other
+                     200, 100
+        );
+    for(int i = 0; i < circles.size(); ++i) {
+         Vec3i c = circles[i];
+         if(c[2] < 25)
+            continue;
+         Point point = Point(c[0], c[1]);
+         int top = point.y - c[2];
+         int bot = point.y + c[2];
+         int left = point.x - c[2];
+         int right = point.x + c[2];
+         mat.adjustROI(top, bot, left, right);
+         orb(mat, 0, c[0], c[1], c[2]);
+    }
+    mat.adjustROI(0, mat.rows, 0, mat.cols);
 }
 
 bool orb(Mat mat, int corners) {
@@ -303,6 +323,82 @@ bool orb(Mat mat, int corners) {
                 else
                     if (corners == 0) {
                         detected_circles.push_back(Circle(RADIUS, CENTER));
+                    }
+            return true;
+        }
+    }
+    return false;
+}
+
+bool orb(Mat mat, int corners, int x, int y, int r) {
+    resize(mat, mat, Size(200, 200));
+    std::vector<Point2f> targetCorners(4);
+    std::vector<cv::KeyPoint> targetKeypoints;
+    cv::Mat targetDescriptors;
+    orbDetector->detectAndCompute(mat, noArray(), targetKeypoints, targetDescriptors);
+
+    for (Filter filter : filters) {
+        if (filter.corners != corners)
+            continue;
+
+        std::vector<DMatch> matches;
+        matcher.match(targetDescriptors, filter.descriptors,
+                      matches, noArray());
+
+        if (matches.size() < 4) {
+            continue;
+        }
+
+        double maxDist = 0.0;
+        double minDist = 100000;
+
+        for (DMatch match : matches) {
+            double dist = match.distance;
+            if (dist < minDist) {
+                minDist = dist;
+            }
+            if (dist > maxDist) {
+                maxDist = dist;
+            }
+        }
+
+        if (minDist > 50.0) {
+            continue;
+        } else {
+            if (minDist > 25.0) {
+                continue;
+            }
+        }
+
+        std::vector<cv::Point> goodTargetPoints;
+        std::vector<cv::Point> goodReferencePoints;
+
+        double maxGoodMatchDist = 1.75 * minDist;
+        for (DMatch match : matches) {
+            if (match.distance < maxGoodMatchDist) {
+                goodReferencePoints.push_back(filter.keypoints[match.trainIdx].pt);
+                goodTargetPoints.push_back(targetKeypoints[match.queryIdx].pt);
+            }
+        }
+
+        if (goodTargetPoints.size() < 4 ||
+            goodReferencePoints.size() < 4) {
+            return false;
+        }
+
+        Mat homography = findHomography(goodReferencePoints, goodTargetPoints, RANSAC, 5);
+
+        if (!homography.empty()) {
+            detected_sign_id = filter.code;
+            if (corners == 4)
+                detected_rects.push_back(Rect(P1.x, P1.y, P2.x - P1.x, P4.y - P1.y));
+            else
+                if (corners == 3)
+                    detected_triangles.push_back(
+                            Triangle(Point(P1.x, P1.y), Point(P2.x, P2.y), Point(P3.x, P3.y)));
+                else
+                    if (corners == 0) {
+                        detected_circles.push_back(Circle(r, CvPoint(x, y));
                     }
             return true;
         }
